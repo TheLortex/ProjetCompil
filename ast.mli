@@ -50,7 +50,7 @@ and operateur =
   | OpLt | OpLet
   | OpGt | OpGet
   | OpPlus | OpMinus
-  | OpProd | OpDiv
+  | OpTimes | OpDiv
   | OpRem
   | OpAnd | OpAndThen
   | OpOr | OpOrElse
