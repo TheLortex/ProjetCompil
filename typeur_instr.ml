@@ -63,7 +63,7 @@ let rec type_instr ret env (tinstr : tinstr) =
              end
          | TRecord _ ->
            message_erreur lb le ("L'expression n'est pas pas une valeur gauche.le");TypeError
-         | _ -> message_erreur lb le "L'expression n'est pas de type enregistrement.";TypeError
+         | _ -> message_erreur lb le ("L'expression n'est pas de type enregistrement : "^p_typ ne.typ);TypeError
        )}
   | IEval (ident,lexprs) ->
     let (return, params) = find_function env ident tinstr.lb tinstr.le in
@@ -86,19 +86,18 @@ let rec type_instr ret env (tinstr : tinstr) =
      typ = (if teq ret expr.typ then
               ret
             else begin
-              message_erreur lb le ("Return"^(p_typ expr.typ)^"; alors que la fonction renvoie "^(p_typ ret));
+              message_erreur lb le ("Return "^(p_typ expr.typ)^"; alors que la fonction renvoie "^(p_typ ret)^".");
               TypeError
             end)}
   | IScope linstr -> let m,err = type_list_instr ret env linstr in
     {tinstr with
      instr = IScope m;
      typ = err}
-  (*TODO: Documenter les erreurs*)
   | IConditional (expr_cdn, linstr_then, linstrs_elseif, linstrs_else) ->
     let nexpr_cdn = type_expr env expr_cdn in
-    let errflag = ref (if teq nexpr_cdn.typ Tbool then TypeNone else TypeError) in
+    let errflag = ref (if teq nexpr_cdn.typ Tbool then TypeNone else (if nexpr_cdn.typ != TypeError then message_erreur lb le ("Incohérence des types pour la condition: "^(p_typ nexpr_cdn.typ)^" != bool.");TypeError)) in
     let nlinstr_then,nerr = type_list_instr ret env linstr_then in
-    let () = if teq nerr TypeError then errflag := TypeError in
+    let () = if teq nerr TypeError then (errflag := TypeError) in
     let nlinstrs_elseif = List.map (fun (expr,lst) ->
         let m,r = type_list_instr ret env lst and nexpr = type_expr env expr in
         if teq r TypeError then errflag := TypeError;nexpr,m) linstrs_elseif in
@@ -106,7 +105,7 @@ let rec type_instr ret env (tinstr : tinstr) =
       match linstrs_else with
       | Some tlist -> begin
         let m,r = type_list_instr ret env tlist in
-        if teq r TypeError then errflag := TypeError;Some m
+        if teq r TypeError then (errflag := TypeError);Some m
       end
       | _ -> None
     in
@@ -118,14 +117,14 @@ let rec type_instr ret env (tinstr : tinstr) =
     let ne1 = type_expr env e1 and ne2 = type_expr env e2 in
     let env, ok = add_var lb le env x Tint ModeIn in
     let m,e = type_list_instr ret env instrs in
-    let errflag = if teq ne1.typ Tint && teq ne2.typ Tint && e != TypeError && ok then TypeNone else TypeError in
+    let errflag = if teq ne1.typ Tint && teq ne2.typ Tint && e != TypeError && ok then TypeNone else (if(not(teq ne1.typ Tint && teq ne2.typ Tint) && ne1.typ != TypeError && ne2.typ != TypeError) then message_erreur lb le ("Incohérence des types pour for: "^(p_typ ne1.typ)^" != int ou "^(p_typ ne2.typ)^" != int.");TypeError) in
     {tinstr with
      instr = IFor(x,reverse,ne1,ne2,m);
      typ = errflag}
   | IWhile (texpr, instrs) ->
     let ne = type_expr env texpr in
     let m,e = type_list_instr ret env instrs in
-    let errflag = if teq ne.typ Tbool && not(teq e TypeError) then TypeNone else TypeError in
+    let errflag = if teq ne.typ Tbool && not(teq e TypeError) then TypeNone else (if not(teq ne.typ Tbool) && ne.typ != TypeError then message_erreur lb le ("Incohérence des types pour while: "^(p_typ ne.typ)^" != bool.");TypeError) in
     {tinstr with
      instr = IWhile(texpr, instrs);
      typ = errflag}

@@ -16,7 +16,7 @@ let rec type_expr env (texpr : texpr) =
        {texpr with
         expr = EAccess(Some nexpr, ident);
         typ = (match nexpr.typ with
-                | TRecord x | TAccessRecord x -> find_record_field env x ident lb le
+                | TAccessRecord x -> find_record_field env x ident lb le
                 | _ -> message_erreur lb le ("L'expression gauche n'est pas de type enregistrement.");TypeError)}
     end
   | EOp (e1, op, e2) when List.mem op [OpPlus; OpMinus; OpTimes; OpDiv; OpRem] ->
@@ -93,14 +93,14 @@ let rec type_expr env (texpr : texpr) =
               end)}
   | ENew i ->
     {texpr with
-     typ = (if find_record env i
-            then
-              TAccessRecord i
-            else
-              begin
-                message_erreur lb le ("Enregistrement "^i^" non défini.");
-                TypeError
-              end)}
+     typ = (let res,_ = find_record env i in
+              if res then
+                TAccessRecord i
+              else
+                begin
+                  message_erreur lb le ("Enregistrement "^i^" non défini.");
+                  TypeError
+                end)}
   (*Appel de fonction ou de procédure*)
   | EEval (ident,exprs) ->
       let (return, params) = find_function env ident lb le in
@@ -116,7 +116,7 @@ let rec type_expr env (texpr : texpr) =
               Tchar
             else
               begin
-                if nexpr.typ != TypeError then 
+                if nexpr.typ != TypeError then
                 message_erreur lb le ("Incohérence des types: int != "^(p_typ nexpr.typ));
                 TypeError
               end)}

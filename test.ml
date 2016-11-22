@@ -27,11 +27,11 @@ let ex =
     pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
     in
     try (let program = Parser.fichier Lexer.token buf in
-         print_program (typeur program);
+         print_program (typeur !file program);
          exit(42)) with
       | Parser.Error ->
         fprintf stderr "%a: syntax error \n" print_position buf;
-        
+
         exit 1
       | Lexer.LexingError _ ->
         fprintf stderr "%a: lexing error \n" print_position buf;

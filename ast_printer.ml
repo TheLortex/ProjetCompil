@@ -17,7 +17,7 @@ let edge ?(color="black")  id1 id2 = Stmt_edge
 let _id = ref(0)
 let next_id () = _id := !_id + 1; string_of_int !_id
 
-let p_typ = function
+let rec p_typ = function
   | Tint -> "int"
   | Tchar -> "char"
   | Tbool -> "bool"
@@ -26,6 +26,8 @@ let p_typ = function
   | TAccessRecord r -> "access("^r^")"
   | TypeError -> "ERR"
   | TypeNone -> "none"
+  | TType t -> "type "^(p_typ t)
+  | _ -> ""
 
 let p_op = function
   | OpAnd -> "and"

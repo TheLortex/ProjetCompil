@@ -4,37 +4,37 @@ type loc = Lexing.position
 type ident = string
 
 type mode =
-  | ModeIn
-  | ModeInOut
-  
+  | ModeIn (*Readonly*)
+  | ModeInOut (*rw*)
+  | ModeNone
+
+module Smap = Map.Make(String)
+
 type typ =
   | Tint
   | Tchar
   | Tbool
   | TypeNull
   | TRecord of string
+  | TRecordDef of recd
   | TAccessRecord of string
   | TypeError
   | TypeNone
-  | TType of typ
   | TFunction of func
+  | TType of typ
+
 and func = typ * (tparam list)
 and tparam = ident * (mode option) * typ
-
-
-
-module Smap = Map.Make(String)
-type recd = typ Smap.t
+and recd = typ Smap.t
 
 type env = {
   vars: (typ * mode) Smap.t;
-  types: typ Smap.t;
-  records: recd Smap.t;
-  functions: func Smap.t;
   idents: ident list;
+  records_to_check: ident list
+  (*TODO: Pipeliner le truc*)
 }
 
-let empty = {vars = Smap.empty;types = Smap.empty; records = Smap.empty; functions = Smap.empty; idents = []}
+let empty = {vars = Smap.empty; idents = []; records_to_check = []}
 
 type status = int Smap.t
 
