@@ -17,7 +17,7 @@
 %token PLUS MINUS TIMES DIV
 %token EQ NEQ
 %token LET GET GT LT
-%token COLON SEMICOLON ASSIGN COMMA DOT
+%token COLON SEMICOLON ASSIGN COMMA DOT DOTDOT
 %token CHARACTVAL
 
 %left OR
@@ -150,10 +150,10 @@ instr:
   | IF e = expr THEN i=instrs_
       eif = elsifs
       END IF SEMICOLON {to_tinstr (IConditional (e,i,eif,None),$startpos,$endpos)}
-  | FOR i = IDENT IN REVERSE e1 = expr DOT DOT e2 = expr
+  | FOR i = IDENT IN REVERSE e1 = expr DOTDOT e2 = expr
     LOOP ins=instrs_ END LOOP SEMICOLON
       {to_tinstr (IFor (i,true,e1,e2,ins),$startpos,$endpos)}
-  | FOR i = IDENT IN e1 = expr DOT DOT e2 = expr
+  | FOR i = IDENT IN e1 = expr DOTDOT e2 = expr
     LOOP ins=instrs_ END LOOP SEMICOLON
       {to_tinstr (IFor (i,false,e1,e2,ins),$startpos,$endpos)}
   | WHILE e = expr LOOP ins = instrs_ END LOOP SEMICOLON
