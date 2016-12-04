@@ -129,7 +129,15 @@ let find_type env ident lb le =
       | _ -> TypeError
     end
   with
-  | Not_found -> (message_erreur lb le ("Type "^ident^" non déclaré.\n"); TypeError)
+  | Not_found ->
+    begin
+      match ident with
+      | "integer" -> Tint
+      | "boolean" -> Tbool
+      | "character" -> Tchar
+      | "none" -> TypeNone
+      | _ -> (message_erreur lb le (ident^" ne désigne pas un type.");TypeError)
+    end
 
 let add_var lb le env ident typ mode =
   let env = {env with vars = Smap.add ident (typ,mode) env.vars} in

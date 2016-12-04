@@ -31,7 +31,6 @@ type env = {
   vars: (typ * mode) Smap.t;
   idents: ident list;
   records_to_check: ident list
-  (*TODO: Pipeliner le truc*)
 }
 
 let empty = {vars = Smap.empty; idents = []; records_to_check = []}

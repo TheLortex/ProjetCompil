@@ -8,4 +8,3 @@ procedure Test is
 begin
    P(v);
 end;
-

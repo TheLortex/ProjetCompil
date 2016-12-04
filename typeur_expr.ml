@@ -16,8 +16,10 @@ let rec type_expr env (texpr : texpr) =
        {texpr with
         expr = EAccess(Some nexpr, ident);
         typ = (match nexpr.typ with
-                | TAccessRecord x -> find_record_field env x ident lb le
-                | _ -> message_erreur lb le ("L'expression gauche n'est pas de type enregistrement.");TypeError)}
+            | TAccessRecord x -> find_record_field env x ident lb le
+            | TRecord x -> find_record_field env x ident lb le
+            | t -> message_erreur lb le ("L'expression gauche n'est pas de type enregistrement : "^(p_typ t));TypeError)}
+
     end
   | EOp (e1, op, e2) when List.mem op [OpPlus; OpMinus; OpTimes; OpDiv; OpRem] ->
     let nexpr1 = type_expr env e1 and nexpr2 = type_expr env e2 in

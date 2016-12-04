@@ -8,24 +8,17 @@ open Ast_printer
 
 let get_type env lb le = function
   | TAccess i -> TAccessRecord i
-  | TIdent i -> begin
-      match String.lowercase i with
-      | "integer" -> Tint
-      | "boolean" -> Tbool
-      | "character" -> Tchar
-      | "none" -> TypeNone
-      | r ->
-        match find_type env r lb le with
-        | TRecordDef recd ->
-          begin
-          if Smap.is_empty recd then
-            (message_erreur lb le ("L'enregistrement "^r^" est vide.");TypeError)
-          else
-            TRecord r
-          end
-        | TAccessRecord q -> TAccessRecord q
-        | f -> (message_erreur lb le (r^" ne désigne pas un type : "^(p_typ f));TypeError)
-
+  | TIdent i -> let i = String.lowercase i in
+    begin
+      match find_type env i lb le with
+      | TRecordDef recd ->
+        begin
+        if Smap.is_empty recd then
+          (message_erreur lb le ("L'enregistrement "^i^" est vide.");TypeError)
+        else
+          TRecord i
+        end
+      | t -> t
     end
 
 
