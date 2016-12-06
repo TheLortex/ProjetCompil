@@ -15,12 +15,12 @@ let typeur fname (i, decls, instrs) =
   let (fenv, ok, ntree) = type_decl env {decl = DeclProcedure(i,[],decls,instrs);
                                          lb = noloc;
                                          le = noloc;
-                                         env = empty} in
+                                         env = empty} 0 in
   match ntree.decl with
     | DeclFunction(i,_,_,ndecls,ninstrs)  ->
             begin
               if not(ok) then
                 fprintf stderr "Erreur lors du typage du programme.\n";
-              (i, ndecls, ninstrs)
+              ok,(i, ndecls, ninstrs)
             end
     | _ -> failwith "wat"

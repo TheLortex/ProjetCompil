@@ -27,8 +27,15 @@ let ex =
     pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
     in
     try (let program = Parser.fichier Lexer.token buf in
-         print_program (typeur !file program);
-         exit(42)) with
+         if !parse_only then
+           exit(0)
+         else
+          begin
+            let ok, program = typeur !file program in
+            print_program program;
+            if ok then exit(0) else exit(1)
+          end )
+    with
       | Parser.Error ->
         fprintf stderr "%a: syntax error \n" print_position buf;
 

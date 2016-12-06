@@ -29,7 +29,7 @@ and recd = typ Smap.t
 
 type env = {
   vars: (typ * mode) Smap.t;
-  records: recd Smap.t;
+  records: (recd * int) Smap.t;
   idents: ident list;
   records_to_check: ident list
 }

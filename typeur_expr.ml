@@ -95,9 +95,9 @@ let rec type_expr env (texpr : texpr) =
               end)}
   | ENew i ->
     {texpr with
-     typ = (let res,_ = find_record env i in
+     typ = (let res,_,level = find_record env i in
               if res then
-                TAccessRecord i
+                TAccessRecord ((string_of_int level)^" "^i)
               else
                 begin
                   message_erreur lb le ("Enregistrement "^i^" non défini.");
