@@ -96,7 +96,12 @@ let find_record_field env ident x lb le =
           with
           | Not_found -> TypeError
         end
-      | _,_ -> TypeError
+      | _,_ ->
+        begin
+          try
+            Smap.find x (Smap.find ident env.records)
+          with Not_found -> ((message_erreur lb le ("Record "^ident^" non trouvé."));TypeError)
+        end
     end
   with
   | Not_found -> message_erreur lb le ("Champ "^ident^"."^x^" non déclaré.\n"); TypeError
@@ -149,7 +154,9 @@ let add_type lb le env ident t =
   add_ident lb le env ident
 
 let add_record lb le env ident =
-  let env = {env with vars = Smap.add ident (TType (TRecordDef Smap.empty), ModeNone) env.vars} in
+  let env = {env with
+             vars = Smap.add ident (TType (TRecordDef Smap.empty), ModeNone) env.vars;
+             records = Smap.add ident Smap.empty env.records} in
   add_ident lb le env ident
 
 let add_record_field env ident x typ lb le =
@@ -157,7 +164,9 @@ let add_record_field env ident x typ lb le =
   if res then
     begin
       if Smap.mem x record then (message_erreur lb le ("Champs "^x^" déjà déclaré dans l'enregistement "^ident^".");env, false) else (
-        {env with vars = Smap.add ident (TType (TRecordDef (Smap.add x typ record)), ModeNone) env.vars}, true)
+        {env with
+             vars = Smap.add ident (TType (TRecordDef (Smap.add x typ record)), ModeNone) env.vars;
+             records = Smap.add ident (Smap.add x typ record) env.records}, true)
     end
   else
     (message_erreur lb le ("Enregistrement "^ident^" non déclaré.\n"); env,false)

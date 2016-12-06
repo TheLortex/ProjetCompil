@@ -115,7 +115,7 @@ let rec type_instr ret env (tinstr : tinstr) =
     }
   | IFor (x,reverse,e1, e2, instrs) ->
     let ne1 = type_expr env e1 and ne2 = type_expr env e2 in
-    let env, ok = add_var lb le env x Tint ModeIn in
+    let env, ok = {env with vars = Smap.add x (Tint,ModeIn) env.vars}, true in
     let m,e = type_list_instr ret env instrs in
     let errflag = if teq ne1.typ Tint && teq ne2.typ Tint && e != TypeError && ok then TypeNone else (if(not(teq ne1.typ Tint && teq ne2.typ Tint) && ne1.typ != TypeError && ne2.typ != TypeError) then message_erreur lb le ("Incohérence des types pour for: "^(p_typ ne1.typ)^" != int ou "^(p_typ ne2.typ)^" != int.");TypeError) in
     {tinstr with

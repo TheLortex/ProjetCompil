@@ -36,11 +36,14 @@ let rec type_decl env tdecl =
   | DeclType x -> let nenv, ok = add_record lb le env x in
     {nenv with records_to_check = x::nenv.records_to_check}, ok, tdecl
   | DeclTypeAccess (x, y) ->
+    if x = y then (env, false, tdecl) else begin
     let nenv, ok = add_type lb le env x (TAccessRecord y) in
       nenv, (if not(teq (find_type env y lb le) TypeError) then
                                          ok
                                        else
                                          false), tdecl
+
+    end
   | DeclTypeRecord (x, champs) ->
     let aux_add_field (env_, ok) (ident_lst, typ_) =
       let tident = get_type env_ lb le typ_ in
@@ -49,16 +52,16 @@ let rec type_decl env tdecl =
                         nenv,ok_ && ok) (env_,true) ident_lst in
       nenv_, result && ok
     in
-    let r,p = find_record env x in
+    let r,p = find_record env x in (*Cherche un record déclaré non défini*)
     if r && Smap.is_empty p then
       (let nenv, nok = List.fold_left aux_add_field (env,true) champs in
       nenv, nok, tdecl)
     else begin
-      if r then
-        (message_erreur lb le ("L'enregistrement "^x^" a été défini auparavant.");env, false, tdecl)
+      if (r && List.mem x env.idents) then (*Record déclaré et défini*)
+          (message_erreur lb le ("L'enregistrement "^x^" a été défini auparavant.");env, false, tdecl)
       else
         begin
-          let env_, ok_ = (if r then(env, true) else (add_record lb le env x)) in
+          let env_, ok_ = (add_record lb le env x) in
           let nenv, nok = List.fold_left aux_add_field (env_,true) champs in
           nenv, ok_ && nok, tdecl
         end

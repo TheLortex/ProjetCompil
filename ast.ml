@@ -29,11 +29,12 @@ and recd = typ Smap.t
 
 type env = {
   vars: (typ * mode) Smap.t;
+  records: recd Smap.t;
   idents: ident list;
   records_to_check: ident list
 }
 
-let empty = {vars = Smap.empty; idents = []; records_to_check = []}
+let empty = {records = Smap.empty; vars = Smap.empty; idents = []; records_to_check = []}
 
 type status = int Smap.t
 
