@@ -42,8 +42,9 @@ let ex =
     | Ast.Error msg ->
       fprintf stderr "%a: syntax error \n %s" print_position buf msg;
       exit 1
-    | Lexer.LexingError _ ->
-      fprintf stderr "%a: lexing error \n" print_position buf;
+    | Lexer.LexingError c ->
+      let msg = if c == 'i' then "Dépassement de la taille d'un entier 32 bits.\n" else "" in
+      fprintf stderr "%a: lexing error \n %s" print_position buf msg;
       exit 1
 
 

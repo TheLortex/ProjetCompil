@@ -51,7 +51,13 @@ rule token = parse
   | eof     {EOF}
   | '\n'    {next_line lexbuf; token lexbuf}
   | [' ' '\t']    {token lexbuf}
-  | digit+ as s {INT (int_of_string s)}
+  | digit+ as s {
+    try
+      let i = int_of_string s in
+        if i > - Int32.to_int Int32.min_int || i < Int32.to_int Int32.min_int then (print_int i;raise (LexingError 'i'))
+        else INT (int_of_string s)
+    with
+      | Failure _ -> raise (LexingError 'i')}
   | identchr as s {let s = String.lowercase s in
   if s = "character\'val" then CHARACTVAL else raise (LexingError '\'')}
   | '\''(_ as c) '\'' {CHR c}
