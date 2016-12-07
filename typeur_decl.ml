@@ -88,20 +88,26 @@ let rec type_decl env tdecl niveau =
         end
     end
   | Decl (xlist, typ_, None) ->
+    let autoshadow = List.exists (fun x -> x = match typ_ with
+      |TIdent i |TAccess i -> i ) xlist in
+    if autoshadow then (message_erreur lb le ("Shadowing du type "^(match typ_ with |TIdent i |TAccess i -> i)^" par une variable du même nom."));
     let vtype = get_type env lb le typ_  in
     if not(teq vtype TypeError) then
       let env, ok = List.fold_left (fun (env_,ok_) x ->
           let env_,ok = add_var lb le env_ x vtype ModeInOut in
-          env_, ok && ok_) (env,true) xlist in
+          env_, ok && ok_) (env,not(autoshadow)) xlist in
       env, ok, tdecl
     else
       env, false, tdecl
   | Decl (xlist, typ_, Some expr) ->
+    let autoshadow = List.exists (fun x -> x = match typ_ with
+      |TIdent i |TAccess i -> i ) xlist in
+    if autoshadow then (message_erreur lb le ("Shadowing du type "^(match typ_ with |TIdent i |TAccess i -> i)^" par une variable du même nom."));
     let nexpr = type_expr env expr and vtype = get_type env lb le typ_ in
     if teq nexpr.typ vtype then
       let env, ok = List.fold_left (fun (env_,ok_) x ->
         let env_, ok = add_var lb le env_ x vtype ModeInOut in
-        env_, ok && ok_) (env,true) xlist in
+        env_, ok && ok_) (env,not(autoshadow)) xlist in
       env,ok, {tdecl with decl = Decl (xlist,typ_,Some nexpr)}
     else
       begin
