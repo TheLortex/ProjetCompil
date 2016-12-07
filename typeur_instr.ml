@@ -70,7 +70,14 @@ let rec type_instr ret env (tinstr : tinstr) =
     let ntexprs = List.map (fun expr -> type_expr env expr) lexprs in
     {tinstr with
      instr = IEval(ident,ntexprs);
-     typ = (if check_type env lb le params ntexprs then return else TypeError)}
+     typ = (if check_type env lb le params ntexprs then
+              begin
+                if teq return TypeNone then
+                  TypeNone
+                else
+                  (message_erreur lb le "Utilisation invalide d'une fonction dans une procédure."; TypeError)
+              end
+            else TypeError)}
   | IReturn None -> {tinstr with
                      typ = (if teq ret TypeNone then
                               TypeNone
