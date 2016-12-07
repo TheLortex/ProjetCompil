@@ -31,6 +31,7 @@ let identchr  = ident '\'' ident
 rule token = parse
   | "--"    {comment lexbuf}
   | '.'     {DOT}
+  | ".."    {DOTDOT}
   | ','     {COMMA}
   | ":="    {ASSIGN}
   | ':'     {COLON}

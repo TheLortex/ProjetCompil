@@ -1,6 +1,6 @@
 type loc = Lexing.position
 
-
+exception Error of string
 type ident = string
 
 type mode =

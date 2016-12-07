@@ -36,13 +36,15 @@ let ex =
             if ok then exit(0) else exit(1)
           end )
     with
-      | Parser.Error ->
-        fprintf stderr "%a: syntax error \n" print_position buf;
-
-        exit 1
-      | Lexer.LexingError _ ->
-        fprintf stderr "%a: lexing error \n" print_position buf;
-        exit 1
+    | Parser.Error ->
+      fprintf stderr "%a: syntax error \n" print_position buf;
+      exit 1
+    | Ast.Error msg ->
+      fprintf stderr "%a: syntax error \n %s" print_position buf msg;
+      exit 1
+    | Lexer.LexingError _ ->
+      fprintf stderr "%a: lexing error \n" print_position buf;
+      exit 1
 
 
 (**

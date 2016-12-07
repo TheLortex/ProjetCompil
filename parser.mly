@@ -1,7 +1,6 @@
 %{
   open Ast
 
-
   let to_texpr (ex,b,e) = {expr=ex; lb=b; le=e; typ=TypeNone}
   let to_tdecl (d,b,e) = {decl=d; lb=b; le=e; env=empty}
   let to_tinstr (i,b,e) = {instr=i; lb=b; le=e; typ=TypeNone}
@@ -17,7 +16,7 @@
 %token PLUS MINUS TIMES DIV
 %token EQ NEQ
 %token LET GET GT LT
-%token COLON SEMICOLON ASSIGN COMMA DOT
+%token COLON SEMICOLON ASSIGN COMMA DOT DOTDOT
 %token CHARACTVAL
 
 %left OR
@@ -46,7 +45,7 @@ fichier:
     && (String.lowercase i3) = (String.lowercase i4) then
       (i3,d,i)
 
-    else failwith ("Mauvaise syntaxe de début de fichier.\n"^(String.lowercase i3)^"\n"^(String.lowercase i4)^"\n")
+    else  (raise (Error "Mauvaise syntaxe de début de fichier.\n"))
   }
 | WITH i1 = IDENT DOT i2 = IDENT SEMICOLON
     USE i1_ = IDENT DOT i2_ = IDENT SEMICOLON
@@ -57,7 +56,7 @@ fichier:
       && (String.lowercase i1_) = "ada" && (String.lowercase i2_) = "text_io"
       then
         (i3,d,i)
-      else failwith "Mauvaise syntaxe de début de fichier."
+      else (raise (Error "Mauvaise syntaxe de début de fichier.\n"))
     }
 ;
 
@@ -72,7 +71,7 @@ decl:
       BEGIN ins = instrs_ END i2 = IDENT SEMICOLON {
         if (String.lowercase i) = (String.lowercase i2) then
           to_tdecl (DeclProcedure (i,p,d,ins),$startpos,$endpos)
-        else failwith ("Erreur de nommage: "^i^" != "^i2)
+        else (raise (Error ("Erreur de nommage: "^i^" != "^i2^"\n")))
       }
     | PROCEDURE i = IDENT p = params IS d = list(decl)
       BEGIN ins = instrs_ END SEMICOLON {to_tdecl (DeclProcedure (i,p,d,ins),$startpos,$endpos)}
@@ -80,7 +79,7 @@ decl:
       BEGIN ins = instrs_ END i2 = IDENT SEMICOLON {
           if (String.lowercase i) = (String.lowercase i2) then
             to_tdecl (DeclFunction (i,p,t,d,ins),$startpos,$endpos)
-          else failwith ("Erreur de nommage: "^i^" != "^i2)
+          else (raise (Error ("Erreur de nommage: "^i^" != "^i2^"\n")))
         }
     | FUNCTION i = IDENT p = params RETURN t=typ IS d = list(decl)
       BEGIN ins = instrs_ END SEMICOLON {to_tdecl (DeclFunction (i,p,t,d,ins),$startpos,$endpos)}
@@ -150,10 +149,10 @@ instr:
   | IF e = expr THEN i=instrs_
       eif = elsifs
       END IF SEMICOLON {to_tinstr (IConditional (e,i,eif,None),$startpos,$endpos)}
-  | FOR i = IDENT IN REVERSE e1 = expr DOT DOT e2 = expr
+  | FOR i = IDENT IN REVERSE e1 = expr DOTDOT e2 = expr
     LOOP ins=instrs_ END LOOP SEMICOLON
       {to_tinstr (IFor (i,true,e1,e2,ins),$startpos,$endpos)}
-  | FOR i = IDENT IN e1 = expr DOT DOT e2 = expr
+  | FOR i = IDENT IN e1 = expr DOTDOT e2 = expr
     LOOP ins=instrs_ END LOOP SEMICOLON
       {to_tinstr (IFor (i,false,e1,e2,ins),$startpos,$endpos)}
   | WHILE e = expr LOOP ins = instrs_ END LOOP SEMICOLON
