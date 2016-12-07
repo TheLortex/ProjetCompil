@@ -133,11 +133,6 @@ let rec type_decl env tdecl niveau =
             | IConditional(_,thenlist,elseiflist,Some elselist) ->
               let _,elseiflist = List.split elseiflist in
               (check_return thenlist && (List.for_all check_return elseiflist) && check_return elselist) || check_return q
-            | IConditional(_,thenlist,elseiflist,None) ->
-              let _,elseiflist = List.split elseiflist in
-              (check_return thenlist && (List.for_all check_return elseiflist)) || check_return q
-            | IFor (_,_,_,_,lst) -> check_return lst || check_return q
-            | IWhile (_,lst) -> check_return lst || check_return q
             | _ -> check_return q
           end
       end in
