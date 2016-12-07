@@ -19,21 +19,26 @@ let message_erreur lb le message =
   print_position lb le;
   fprintf stderr ":\n %s \n" message
 
-  let rec est_valeur_gauche expr = match expr.expr with
-    | EAccess (None, ident) -> true
-    | EAccess (Some e, ident)-> begin
-        match e.typ with
-        | TRecord _ -> est_valeur_gauche e
-        | TAccessRecord _ -> true
-        | _ -> false
-      end
-    | _ -> false
-
 let find_var_mode env ident lb le  =
   try
     let _,m = Smap.find ident env.vars in m
   with
   | Not_found -> message_erreur lb le ("Variable "^ident^" non déclarée.\n"); ModeIn
+
+let rec est_valeur_gauche env expr lb le = match expr.expr with
+  | EAccess (None, ident) -> (*ident peut être un appel de fonction sans paramètre. *)
+    begin
+      match find_var_mode env ident lb le with
+        | ModeIn | ModeNone -> false
+        | ModeInOut -> true
+    end
+  | EAccess (Some e, ident)-> begin
+      match e.typ with
+      | TRecord _ -> est_valeur_gauche env e lb le
+      | TAccessRecord _ -> true
+      | _ -> false
+    end
+  | _ -> false
 
 
 let rec get_expr_mode env texpr lb le = match texpr.expr with
@@ -49,10 +54,10 @@ let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) = match l1,l2 
     if mode = Some ModeInOut then
       begin
         let expr_mode = get_expr_mode env t2 lb le in
-        if est_valeur_gauche t2 && expr_mode != ModeIn then
+        if est_valeur_gauche env t2 lb le && expr_mode != ModeIn then
           check_type env lb le q1 q2
         else begin
-          if not(est_valeur_gauche t2) then
+          if not(est_valeur_gauche env t2 lb le) then
             (message_erreur lb le ("Le paramètre "^x^" est déclaré in out mais l'expression donnée n'est pas une valeur gauche.");(let _ = check_type env lb le q1 q2 in ());false)
           else
             (message_erreur lb le ("Le paramètre "^x^" est déclaré in out mais l'expression donnée est déclarée en in.");(let _ = check_type env lb le q1 q2 in ());false)

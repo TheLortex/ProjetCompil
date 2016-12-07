@@ -32,7 +32,7 @@ let rec type_instr ret env (tinstr : tinstr) =
     {tinstr with
      instr = IAssign((Some ne, ident),texpr);
      typ = (match ne.typ with
-         | TRecord r when est_valeur_gauche ne ->
+         | TRecord r when est_valeur_gauche env ne lb le ->
            let trecordfield = (find_record_field env r ident tinstr.lb tinstr.le) in
            if teq trecordfield texpr.typ then
              begin
