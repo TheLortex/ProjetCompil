@@ -180,8 +180,10 @@ let add_record_field env ident x typ lb le niveau =
   if res then
     begin
       if Smap.mem x record then (message_erreur lb le ("Champs "^x^" déjà déclaré dans l'enregistement "^ident^".");env, false) else (
+        let nvars = Smap.add ((string_of_int niveau)^" "^ident) (TType (TRecordDef (Smap.add x typ record)), ModeNone) env.vars in
+        let nvars = Smap.add ident (TType (TRecord ((string_of_int niveau)^" "^ident)), ModeNone) nvars in
         {env with
-         vars = Smap.add ((string_of_int niveau)^" "^ident) (TType (TRecordDef (Smap.add x typ record)), ModeNone) env.vars;
+         vars = nvars;
          records = Smap.add ident ((Smap.add x typ record), niveau) env.records}, true)
     end
   else

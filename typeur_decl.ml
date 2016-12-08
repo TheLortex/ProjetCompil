@@ -6,17 +6,19 @@ open Ast_printer
 
 
 
-let get_type env lb le = function
-  | TAccess i -> TAccessRecord i
-  | TIdent i -> let i = String.lowercase i in
-    begin
-      match find_type env i lb le with
-      | TRecordDef recd ->
+let get_type env lb le i =
+  let id = String.lowercase (match i with |TIdent x |TAccess x -> x) in
+  begin
+      match find_type env id lb le with
+      | TRecord ident ->
         begin
-        if Smap.is_empty recd then
-          (message_erreur lb le ("L'enregistrement "^i^" est vide.");TypeError)
-        else
-          TRecord i
+          match i with
+          | TIdent x ->
+            if (let _,recd,_ = find_record env x in Smap.is_empty recd) then
+              (TypeError)
+            else
+              (TRecord ident)
+          | TAccess x -> (TAccessRecord ident)
         end
       | t -> t
     end
@@ -49,7 +51,7 @@ let rec type_decl env tdecl niveau =
         nenv, ok1&&ok2, tdecl
       end
   | DeclTypeRecord (x, champs) ->
-    let verifier_champ (_,typ_) = match typ_ with
+    let verifier_champ env (_,typ_) = match typ_ with
       | TIdent i ->
         begin
           match find_type env i lb le with
@@ -71,9 +73,9 @@ let rec type_decl env tdecl niveau =
                         nenv,ok_ && ok) (env_,true) ident_lst in
       nenv_, result && ok
     in
-    let ok0 = List.for_all verifier_champ champs in
     let r,p,_ = find_record env x in (*Cherche un record déclaré non défini*)
     if r && Smap.is_empty p then
+      let ok0 = List.for_all (verifier_champ env) champs in
       (let nenv, nok = List.fold_left aux_add_field (env,true) champs in
        nenv, nok&&ok0,
        {tdecl with decl = DeclTypeRecord ((string_of_int niveau)^" "^x,champs)})
@@ -83,6 +85,7 @@ let rec type_decl env tdecl niveau =
       else
         begin
           let env_, ok_ = (add_record lb le env x niveau) in
+          let ok0 = List.for_all (verifier_champ env_) champs in
           let nenv, nok = List.fold_left aux_add_field (env_,true) champs in
           nenv, ok_ && nok && ok0, {tdecl with decl = DeclTypeRecord ((string_of_int niveau)^" "^x,champs)}
         end
