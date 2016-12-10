@@ -121,6 +121,7 @@ let rec type_instr ret env (tinstr : tinstr) =
      typ = !errflag
     }
   | IFor (x,reverse,e1, e2, instrs) ->
+    let env = {env with vars = Smap.remove x env.vars} in
     let ne1 = type_expr env e1 and ne2 = type_expr env e2 in
     let env, ok = {env with vars = Smap.add x (Tint,ModeIn) env.vars}, true in
     let m,e = type_list_instr ret env instrs in
