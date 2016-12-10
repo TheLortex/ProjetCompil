@@ -22,12 +22,12 @@ let rec p_typ = function
   | Tchar -> "char"
   | Tbool -> "bool"
   | TypeNull -> "null"
-  | TRecord r -> "record("^r^")"
-  | TAccessRecord r -> "access("^r^")"
+  | TRecord (i,r) -> "record("^r^")"
+  | TAccessRecord (i,r) -> "access("^r^")"
   | TypeError -> "ERR"
   | TypeNone -> "none"
-  | TType t -> "type "^(p_typ t)
-  | _ -> ""
+  | TType (i,t) -> "type "^t
+  | _ -> "def"
 
 let p_op = function
   | OpAnd -> "and"

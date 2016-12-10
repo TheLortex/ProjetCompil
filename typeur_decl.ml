@@ -23,12 +23,15 @@ let get_type env lb le i =
       | t -> t
     end
 
-let check_records lb le env niveau =
+let check_records lb le env =
   let aux_check ok ident =
     try
-      let t,_ = Smap.find ((string_of_int (niveau))^" "^ident) env.vars in (*Pas de try car ident inclus dans env.idents*)
+      let t,_ = Smap.find ident env.vars in (*Pas de try car ident inclus dans env.idents*)
       match t with
-      | TType (TRecordDef recd) -> if Smap.is_empty recd then (message_erreur lb le ("Le type enregistrement "^ident^" est déclaré mais n'a pas été défini avant de passer à un niveau de déclarations supérieur.");false) else ok
+      | TType (niveau,ident) ->
+        (match get_custom_type env (niveau,ident) with
+        | TRecordDef recd -> if Smap.is_empty recd then (message_erreur lb le ("Le type enregistrement "^ident^" est déclaré mais n'a pas été défini avant de passer à un niveau de déclarations supérieur.");false) else ok
+        | _ -> ok)
       | _ -> ok
     with
     | Not_found -> message_erreur lb le ("Enregistrement "^ident^" non trouvé.");false
@@ -38,7 +41,8 @@ let check_records lb le env niveau =
 let rec type_decl env tdecl niveau =
   let lb = tdecl.lb and le = tdecl.le in
   match tdecl.decl with
-  | DeclType x -> let nenv, ok = add_record lb le env x niveau in
+  | DeclType x ->
+    let nenv, ok = add_type lb le env x (TRecordDef Smap.empty) niveau in
     if ok then {nenv with records_to_check = x::nenv.records_to_check}, ok, tdecl
     else nenv, ok, tdecl
   | DeclTypeAccess (x, y) ->
@@ -47,7 +51,7 @@ let rec type_decl env tdecl niveau =
     else
       begin
         let ok1,_,lvl = find_record env y in
-        let nenv, ok2 = add_type lb le env x (TAccessRecord ((string_of_int lvl)^" "^y)) in
+        let nenv, ok2 = add_type lb le env x (TAccessRecord (lvl,y)) niveau in
         nenv, ok1&&ok2, tdecl
       end
   | DeclTypeRecord (x, champs) ->
@@ -56,8 +60,8 @@ let rec type_decl env tdecl niveau =
         begin
           match find_type env i lb le with
           | TypeError -> false
-          | TRecord x -> is_record_defined env x lb le
-          | _ -> true
+          | TRecord (lvl, ident) -> if is_record_defined lb le env ident  then true else (message_erreur lb le ("Type enregistrement "^ident^" déclaré mais pas défini.");false)
+          | t -> true
         end
       | TAccess i ->
         begin
@@ -69,25 +73,26 @@ let rec type_decl env tdecl niveau =
     let aux_add_field (env_, ok) (ident_lst, typ_) =
       let tident = get_type env_ lb le typ_ in
       let nenv_, result = List.fold_left (fun (nenv_,ok) ident ->
-                        let nenv,ok_ = add_record_field nenv_ x ident tident lb le niveau in
+                        let nenv,ok_ = add_record_field lb le nenv_ x ident tident niveau in
                         nenv,ok_ && ok) (env_,true) ident_lst in
       nenv_, result && ok
     in
+    print_string x; print_string "\n";
     let r,p,_ = find_record env x in (*Cherche un record déclaré non défini*)
     if r && Smap.is_empty p then
       let ok0 = List.for_all (verifier_champ env) champs in
       (let nenv, nok = List.fold_left aux_add_field (env,true) champs in
-       nenv, nok&&ok0,
-       {tdecl with decl = DeclTypeRecord ((string_of_int niveau)^" "^x,champs)})
+       nenv, nok&&ok0,tdecl)
     else begin
       if (r && List.mem x env.idents) then (*Record déclaré et défini*)
           (message_erreur lb le ("L'enregistrement "^x^" a été défini auparavant.");env, false, tdecl)
       else
         begin
-          let env_, ok_ = (add_record lb le env x niveau) in
+          let env_, ok_ =  add_type lb le env x (TRecordDef Smap.empty) niveau in
           let ok0 = List.for_all (verifier_champ env_) champs in
           let nenv, nok = List.fold_left aux_add_field (env_,true) champs in
-          nenv, ok_ && nok && ok0, {tdecl with decl = DeclTypeRecord ((string_of_int niveau)^" "^x,champs)}
+          Smap.iter (fun n x -> print_string (".."^n^"\n")) (match (Lmap.find (niveau,x) nenv.types) with |TRecordDef wat -> wat | _ -> Smap.empty);
+          (nenv, ok_ && nok && ok0, tdecl)
         end
     end
   | Decl (xlist, typ_, None) ->
@@ -121,7 +126,7 @@ let rec type_decl env tdecl niveau =
   | DeclProcedure (i,params,decls,instrs) ->
     type_decl env {tdecl with decl = DeclFunction (i,params,TIdent "none",decls,instrs)} niveau
   | DeclFunction  (i,params,rettyp_,decls,instrs) ->
-    let chk_records = check_records lb le env niveau in
+    let chk_records = check_records lb le env in
     (*Vérification de la présence d'un return en dernière instruction.*)
     let rec check_return lst =
       if rettyp_ = TIdent "none" then true else
@@ -156,7 +161,7 @@ let rec type_decl env tdecl niveau =
         | None ->
           let ev, ek_ = add_var lb le ev i t ModeIn in ev, ek_ && ek) (nenv,ok) tparams in
     let nenv, err_d, ndecl = type_decl_list nenv decls (niveau+1) in
-    let chk_records = chk_records && check_records lb le nenv (niveau+1) in
+    let chk_records = chk_records && check_records lb le nenv in
     let ninstr, err_i = type_list_instr ret nenv instrs in
     let err_r = (if check_return instrs then
                    ok

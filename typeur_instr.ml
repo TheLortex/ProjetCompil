@@ -32,8 +32,8 @@ let rec type_instr ret env (tinstr : tinstr) =
     {tinstr with
      instr = IAssign((Some ne, ident),texpr);
      typ = (match ne.typ with
-         | TRecord r when est_valeur_gauche env ne lb le ->
-           let trecordfield = (find_record_field env r ident tinstr.lb tinstr.le) in
+         | TRecord (level,r) when est_valeur_gauche env ne lb le ->
+           let trecordfield = (find_record_field env (level,r) ident tinstr.lb tinstr.le) in
            if teq trecordfield texpr.typ then
              begin
                match e.expr with (*TODO: Vérifier que c'est correct*)
@@ -51,8 +51,8 @@ let rec type_instr ret env (tinstr : tinstr) =
                message_erreur lb le ("Incohérence des types pour "^r^"."^ident^": "^(p_typ trecordfield)^" := "^(p_typ texpr.typ));
                TypeError
              end
-         | TAccessRecord r ->
-           let trecordfield = (find_record_field env r ident tinstr.lb tinstr.le) in
+         | TAccessRecord (level,r) ->
+           let trecordfield = (find_record_field env (level,r) ident tinstr.lb tinstr.le) in
            if teq trecordfield texpr.typ then
              TypeNone
            else

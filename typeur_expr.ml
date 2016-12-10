@@ -97,7 +97,7 @@ let rec type_expr env (texpr : texpr) =
     {texpr with
      typ = (let res,_,level = find_record env i in
               if res then
-                TAccessRecord ((string_of_int level)^" "^i)
+                TAccessRecord (level,i)
               else
                 begin
                   message_erreur lb le ("Enregistrement "^i^" non défini.");

@@ -9,7 +9,7 @@ let teq t1 t2 = match t1,t2 with
   | (TAccessRecord _, TypeNull) -> true
   | TypeNull,(TAccessRecord _) -> true
   | t1,t2 when t1 = t2 -> true
-  | t1,t2 -> false
+  | _,_ -> false
 
 let message_erreur lb le message =
   let print_position pos1 pos2 =
@@ -68,14 +68,11 @@ let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) = match l1,l2 
   | ((x,_,t1)::q1),(t2::q2) ->
     if t2.typ != TypeError && t1 != TypeError then message_erreur lb le ("Incohérence des types pour le paramètre "^x^" : "^(p_typ t1)^" != "^(p_typ t2.typ));(let _ = check_type env lb le q1 q2 in ());false
 
-
-
 let add_ident lb le env i =
   if List.mem i env.idents then
     (message_erreur lb le ("L'identifiant "^i^" a déjà été défini auparavant."); env,false)
   else
     {env with idents = (i::env.idents)}, true
-
 
 let find_var env ident lb le  =
   try
@@ -90,18 +87,18 @@ let find_var env ident lb le  =
   with
   | Not_found -> message_erreur lb le ("Variable "^ident^" non déclarée.\n"); TypeError
 
-let find_record_field env ident x lb le =
-
+let rec find_record_field env (level,ident) x lb le =
   try
     begin
-      match Smap.find ident env.vars with
-      | (TType (TRecordDef r)),_ ->
+      match Lmap.find (level,ident) env.types with
+      | TRecordDef r ->
         begin
           try
             Smap.find x r
           with
           | Not_found -> TypeError
         end
+      | TAccessRecord level_ident -> find_record_field env level_ident x lb le
       | _ -> TypeError
     end
   with
@@ -117,79 +114,77 @@ let find_function env ident lb le =
   with
   | Not_found -> message_erreur lb le ("Fonction "^ident^" non déclarée.\n"); TypeError, []
 
+let get_record_def env (level,ident) =
+  try
+    begin
+      match Lmap.find (level,ident) env.types with
+      | TRecordDef r -> r
+      | _ -> Smap.empty
+    end
+  with
+  | Not_found -> Smap.empty
+
 let find_record env ident =
   try
     begin
-      match Smap.find ident env.records with
-      | recd,lvl-> true, recd, lvl
+      match Smap.find ident env.vars with
+      | TType (lvl,ident),_ -> true, get_record_def env (lvl,ident), lvl
+      | _ -> false, Smap.empty, 0
     end
   with
   | Not_found -> false, Smap.empty, 0
 
-let is_record_defined env x lb le =
-  try
-    begin
-      match Smap.find x env.vars with
-      | TType(TRecordDef recd),_ -> if Smap.is_empty recd then (message_erreur lb le ("Type enregistrement"^x^" utilisé avant sa définition complète."); false)
-        else true
-      | _ -> false
-    end
-  with
-  | Not_found -> false
+let is_record_defined lb le env ident =
+  let result, def, _ = find_record env ident in
+  if result then not(Smap.is_empty def)
+  else (message_erreur lb le ("Type enregistrement"^ident^" non déclaré."); false)
 
-let find_type env ident lb le =
+let get_custom_type env (lvl,ident) = Lmap.find (lvl,ident) env.types
+
+let find_type env type_ident lb le =
   try
     begin
-      match Smap.find ident env.vars with
-      | TType t,_ -> t
+      match Smap.find type_ident env.vars with
+      | TType t,_ -> (match get_custom_type env t with
+        | TRecordDef _ -> TRecord t
+        | x -> x)
       | _ -> TypeError
     end
   with
   | Not_found ->
     begin
-      try
-        match Smap.find ident env.records with
-        | i,l -> TRecord ((string_of_int l)^" "^ident)
-      with Not_found ->
-        begin
-          match ident with
-          | "integer" -> Tint
-          | "boolean" -> Tbool
-          | "character" -> Tchar
-          | "none" -> TypeNone
-          | _ -> (message_erreur lb le (ident^" ne désigne pas un type.");TypeError)
-        end
+      match type_ident with
+      | "integer" -> Tint
+      | "boolean" -> Tbool
+      | "character" -> Tchar
+      | "none" -> TypeNone
+      | _ -> (message_erreur lb le (type_ident^" ne désigne pas un type.");TypeError)
     end
+
 let add_var lb le env ident typ mode = (*TODO: Raise error*)
   let env = {env with vars = Smap.add ident (typ,mode) env.vars} in
-        add_ident lb le env ident
-
-let add_type lb le env ident t =
-  let typedef = TType t in
-  let env = {env with vars = Smap.add ident (typedef, ModeNone) env.vars} in
   add_ident lb le env ident
 
-let add_record lb le env ident niveau =
-  let env = {env with
-             vars = Smap.add ((string_of_int niveau)^" "^ident) (TType (TRecordDef Smap.empty), ModeNone) env.vars;
-             records = Smap.add ident (Smap.empty,niveau) env.records} in
+let add_type lb le env ident typ niveau =
+  let typedef = TType (niveau,ident) in
+  let env = {env with vars = Smap.add ident (typedef, ModeNone) env.vars;
+                      types = Lmap.add (niveau,ident) typ env.types} in
   add_ident lb le env ident
 
-let add_record_field env ident x typ lb le niveau =
-  let res, record, _ = find_record env ident in
+let add_record_field lb le env ident champ typ niveau =
+  let res, def, _ = find_record env ident in
   if res then
     begin
-      if Smap.mem x record then (message_erreur lb le ("Champs "^x^" déjà déclaré dans l'enregistement "^ident^".");env, false) else (
-        let nvars = Smap.add ((string_of_int niveau)^" "^ident) (TType (TRecordDef (Smap.add x typ record)), ModeNone) env.vars in
-        let nvars = Smap.add ident (TType (TRecord ((string_of_int niveau)^" "^ident)), ModeNone) nvars in
+      if Smap.mem champ def then
+        (message_erreur lb le ("Champs "^champ^" déjà déclaré dans l'enregistement "^ident^".");env, false)
+      else (
         {env with
-         vars = nvars;
-         records = Smap.add ident ((Smap.add x typ record), niveau) env.records}, true)
+         types = Lmap.add (niveau,ident) (TRecordDef (Smap.add champ typ def)) env.types}, true)
     end
   else
     (message_erreur lb le ("Enregistrement "^ident^" non déclaré.\n"); env,false)
 
 let add_function ?(addid=true) lb le env ident (ret,params) =
-  let env = {env with vars = Smap.add ident (TFunction (ret,params), ModeNone) env.vars} in
-  let nenv_,nok = (if addid then add_ident lb le env ident else env,true)
-  in nenv_, nok
+  let env       = {env with vars = Smap.add ident (TFunction (ret,params), ModeNone) env.vars} in
+  let env, nok  = (if addid then add_ident lb le env ident else env,true)
+  in env, nok

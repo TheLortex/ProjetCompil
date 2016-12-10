@@ -8,20 +8,29 @@ type mode =
   | ModeInOut (*rw*)
   | ModeNone
 
+type ident_level = int * string
+module Ident_level =
+struct
+  type t = ident_level
+  let compare (l1,s1) (l2,s2) =(if l1 = l2 then String.compare s1 s2 else (l1-l2))
+end
+
+
 module Smap = Map.Make(String)
+module Lmap = Map.Make(Ident_level)
 
 type typ =
   | Tint
   | Tchar
   | Tbool
   | TypeNull
-  | TRecord of string
-  | TRecordDef of recd
-  | TAccessRecord of string
-  | TypeError
+  | TRecord of ident_level
+  | TAccessRecord of ident_level
   | TypeNone
+  | TypeError
   | TFunction of func
-  | TType of typ
+  | TRecordDef of recd
+  | TType of ident_level
 
 and func = typ * (tparam list)
 and tparam = ident * (mode option) * typ
@@ -29,12 +38,12 @@ and recd = typ Smap.t
 
 type env = {
   vars: (typ * mode) Smap.t;
-  records: (recd * int) Smap.t;
+  types: typ Lmap.t;
   idents: ident list;
   records_to_check: ident list
 }
 
-let empty = {records = Smap.empty; vars = Smap.empty; idents = []; records_to_check = []}
+let empty = {types = Lmap.empty; vars = Smap.empty; idents = []; records_to_check = []}
 
 type status = int Smap.t
 
