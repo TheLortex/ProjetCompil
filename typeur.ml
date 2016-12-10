@@ -4,7 +4,6 @@ open Lexing
 open Ast_printer
 
 
-(* Vérifie l'égalité de types *)
 let teq t1 t2 = match t1,t2 with
   | (TAccessRecord _, TypeNull) -> true
   | TypeNull,(TAccessRecord _) -> true
@@ -13,8 +12,11 @@ let teq t1 t2 = match t1,t2 with
 
 let message_erreur lb le message =
   let print_position pos1 pos2 =
-    fprintf stderr "File \"%s\", line %d, characters %d-%d" pos1.pos_fname
-      pos1.pos_lnum (pos1.pos_cnum - pos1.pos_bol + 1) (pos2.pos_cnum - pos2.pos_bol + 1)
+    fprintf stderr "File \"%s\", line %d, characters %d-%d"
+      pos1.pos_fname
+      pos1.pos_lnum
+      (pos1.pos_cnum - pos1.pos_bol + 1)
+      (pos2.pos_cnum - pos2.pos_bol + 1)
   in
   print_position lb le;
   fprintf stderr ":\n %s \n" message
@@ -23,10 +25,13 @@ let find_var_mode env ident lb le  =
   try
     let _,m = Smap.find ident env.vars in m
   with
-  | Not_found -> message_erreur lb le ("Variable "^ident^" non déclarée.\n"); ModeIn
+  | Not_found ->
+    message_erreur lb le
+      ("variable "^ident^" is not declared.\n");
+    ModeIn
 
 let rec est_valeur_gauche env expr lb le = match expr.expr with
-  | EAccess (None, ident) -> (*ident peut être un appel de fonction sans paramètre. *)
+  | EAccess (None, ident) ->
     begin
       match find_var_mode env ident lb le with
         | ModeIn | ModeNone -> false
@@ -46,7 +51,8 @@ let rec get_expr_mode env texpr lb le = match texpr.expr with
   | EAccess (Some e, ident) -> get_expr_mode env e lb le
   | _ -> ModeNone
 
-let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) = match l1,l2 with
+let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) =
+  match l1,l2 with
   | [],[] -> true
   | _,[] -> false
   | [],_ -> false
@@ -58,19 +64,32 @@ let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) = match l1,l2 
           check_type env lb le q1 q2
         else begin
           if not(est_valeur_gauche env t2 lb le) then
-            (message_erreur lb le ("Le paramètre "^x^" est déclaré in out mais l'expression donnée n'est pas une valeur gauche.");(let _ = check_type env lb le q1 q2 in ());false)
+            (message_erreur lb le
+               ("parameter "^x^" is declared 'in out' but the given expression
+isn't a left-value.");
+             (let _ = check_type env lb le q1 q2 in ());
+             false)
           else
-            (message_erreur lb le ("Le paramètre "^x^" est déclaré in out mais l'expression donnée est déclarée en in.");(let _ = check_type env lb le q1 q2 in ());false)
+            (message_erreur lb le ("parameter "^x^" is declared in out but the
+given expression is declared in.");
+             (let _ = check_type env lb le q1 q2 in ());
+             false)
         end
       end
     else
       check_type env lb le q1 q2
   | ((x,_,t1)::q1),(t2::q2) ->
-    if t2.typ != TypeError && t1 != TypeError then message_erreur lb le ("Incohérence des types pour le paramètre "^x^" : "^(p_typ t1)^" != "^(p_typ t2.typ));(let _ = check_type env lb le q1 q2 in ());false
+    if t2.typ != TypeError && t1 != TypeError then
+      message_erreur lb le
+        ("type mismatch for parameter "^x^": "^
+         (p_typ t1)^" != "^(p_typ t2.typ));
+    (let _ = check_type env lb le q1 q2 in ());
+    false
 
 let add_ident lb le env i =
   if List.mem i env.idents then
-    (message_erreur lb le ("L'identifiant "^i^" a déjà été défini auparavant."); env,false)
+    (message_erreur lb le ("identifier "^i^" is already in use in this scope.");
+     env,false)
   else
     {env with idents = (i::env.idents)}, true
 
@@ -80,12 +99,17 @@ let find_var env ident lb le  =
     begin
       match t with
       | TFunction (ret,[]) -> ret
-      | TFunction (ret, p) -> message_erreur lb le ("La fonction "^ident^" attend des paramètres."); TypeError
-      | TType _ -> message_erreur lb le (ident^" est un type.");TypeError
+      | TFunction (ret, p) ->
+        message_erreur lb le
+          ("function "^ident^" requires parameters."); TypeError
+      | TType _ -> message_erreur lb le (ident^" is a type.");TypeError
       | _ -> t
     end
   with
-  | Not_found -> message_erreur lb le ("Variable "^ident^" non déclarée.\n"); TypeError
+  | Not_found ->
+    message_erreur lb le
+      ("variable "^ident^" is not declared.");
+    TypeError
 
 let rec find_record_field env (level,ident) x lb le =
   try
@@ -102,7 +126,10 @@ let rec find_record_field env (level,ident) x lb le =
       | _ -> TypeError
     end
   with
-  | Not_found -> message_erreur lb le ("Champ "^ident^"."^x^" non déclaré.\n"); TypeError
+  | Not_found ->
+    message_erreur lb le
+      ("field "^ident^"."^x^" is not declared.");
+    TypeError
 
 let find_function env ident lb le =
   try
@@ -112,7 +139,8 @@ let find_function env ident lb le =
       | _,_ -> TypeError, []
     end
   with
-  | Not_found -> message_erreur lb le ("Fonction "^ident^" non déclarée.\n"); TypeError, []
+  | Not_found -> message_erreur lb le ("function "^ident^" is not declared.");
+    TypeError, []
 
 let get_record_def env (level,ident) =
   try
@@ -137,7 +165,9 @@ let find_record env ident =
 let is_record_defined lb le env ident =
   let result, def, _ = find_record env ident in
   if result then not(Smap.is_empty def)
-  else (message_erreur lb le ("Type enregistrement"^ident^" non déclaré."); false)
+  else
+    (message_erreur lb le
+       ("record "^ident^" is not declared."); false)
 
 let get_custom_type env (lvl,ident) = Lmap.find (lvl,ident) env.types
 
@@ -148,7 +178,10 @@ let find_type env type_ident lb le =
       | TType t,_ -> (match get_custom_type env t with
         | TRecordDef _ -> TRecord t
         | x -> x)
-      | _ -> TypeError
+      | _ ->
+        (message_erreur lb le
+           (type_ident^" does not refer to a type.");
+         TypeError)
     end
   with
   | Not_found ->
@@ -158,10 +191,13 @@ let find_type env type_ident lb le =
       | "boolean" -> Tbool
       | "character" -> Tchar
       | "none" -> TypeNone
-      | _ -> (message_erreur lb le (type_ident^" ne désigne pas un type.");TypeError)
+      | _ ->
+        (message_erreur lb le
+           (type_ident^" does not refer to a type.");
+         TypeError)
     end
 
-let add_var lb le env ident typ mode = (*TODO: Raise error*)
+let add_var lb le env ident typ mode =
   let env = {env with vars = Smap.add ident (typ,mode) env.vars} in
   add_ident lb le env ident
 
@@ -176,15 +212,27 @@ let add_record_field lb le env ident champ typ niveau =
   if res then
     begin
       if Smap.mem champ def then
-        (message_erreur lb le ("Champs "^champ^" déjà déclaré dans l'enregistement "^ident^".");env, false)
+        (message_erreur lb le
+           ("field "^champ^" is already declared in the record "^ident^".");
+         env, false)
       else (
         {env with
-         types = Lmap.add (niveau,ident) (TRecordDef (Smap.add champ typ def)) env.types}, true)
+         types =
+           Lmap.add
+             (niveau,ident)
+             (TRecordDef (Smap.add champ typ def))
+             env.types
+        }, true)
     end
   else
-    (message_erreur lb le ("Enregistrement "^ident^" non déclaré.\n"); env,false)
+    (message_erreur lb le
+       ("record "^ident^" is not declared.");
+     env,false)
 
 let add_function ?(addid=true) lb le env ident (ret,params) =
-  let env       = {env with vars = Smap.add ident (TFunction (ret,params), ModeNone) env.vars} in
-  let env, nok  = (if addid then add_ident lb le env ident else env,true)
+  let env       =
+    {env with
+     vars = Smap.add ident (TFunction (ret,params), ModeNone) env.vars} in
+  let env, nok  =
+    (if addid then add_ident lb le env ident else env,true)
   in env, nok

@@ -38,7 +38,9 @@
 %%
 
 fichier:
-| WITH i1 = IDENT DOT i2 = IDENT SEMICOLON USE i1_ = IDENT DOT i2_ = IDENT SEMICOLON PROCEDURE i3 = IDENT IS d = list(decl) BEGIN i = instrs_ END i4=IDENT SEMICOLON EOF
+| WITH i1 = IDENT DOT i2 = IDENT SEMICOLON USE i1_ = IDENT DOT i2_ = IDENT
+  SEMICOLON PROCEDURE i3 = IDENT IS d = list(decl) BEGIN i = instrs_ END
+  i4=IDENT SEMICOLON EOF
   {
     if (String.lowercase i1) = "ada" && (String.lowercase i2) = "text_io"
     && (String.lowercase i1_) = "ada" && (String.lowercase i2_) = "text_io"
@@ -61,28 +63,36 @@ fichier:
 ;
 
 decl:
-    | TYPE i = IDENT SEMICOLON {to_tdecl (DeclType i,$startpos,$endpos)}
-    | TYPE i = IDENT IS ACCESS i2 = IDENT SEMICOLON {to_tdecl (DeclTypeAccess (i,i2),$startpos,$endpos)}
+    | TYPE i = IDENT SEMICOLON
+        {to_tdecl (DeclType i,$startpos,$endpos)}
+    | TYPE i = IDENT IS ACCESS i2 = IDENT SEMICOLON
+        {to_tdecl (DeclTypeAccess (i,i2),$startpos,$endpos)}
     | TYPE i = IDENT IS RECORD c = champs_ END RECORD SEMICOLON
-      {to_tdecl (DeclTypeRecord (i,c),$startpos,$endpos)}
-    | i = idents_ COLON t = typ SEMICOLON {to_tdecl (Decl (i,t,None),$startpos,$endpos)}
-    | i = idents_ COLON t = typ ASSIGN e = expr SEMICOLON {to_tdecl (Decl (i,t,(Some e)),$startpos,$endpos)}
+        {to_tdecl (DeclTypeRecord (i,c),$startpos,$endpos)}
+    | i = idents_ COLON t = typ SEMICOLON
+        {to_tdecl (Decl (i,t,None),$startpos,$endpos)}
+    | i = idents_ COLON t = typ ASSIGN e = expr SEMICOLON
+        {to_tdecl (Decl (i,t,(Some e)),$startpos,$endpos)}
     | PROCEDURE i = IDENT p = params IS d = list(decl)
-      BEGIN ins = instrs_ END i2 = IDENT SEMICOLON {
-        if (String.lowercase i) = (String.lowercase i2) then
-          to_tdecl (DeclProcedure (i,p,d,ins),$startpos,$endpos)
-        else (raise (Error ("Erreur de nommage: "^i^" != "^i2^"\n")))
-      }
+      BEGIN ins = instrs_ END i2 = IDENT SEMICOLON
+        {
+          if (String.lowercase i) = (String.lowercase i2) then
+            to_tdecl (DeclProcedure (i,p,d,ins),$startpos,$endpos)
+          else (raise (Error ("Erreur de nommage: "^i^" != "^i2^"\n")))
+        }
     | PROCEDURE i = IDENT p = params IS d = list(decl)
-      BEGIN ins = instrs_ END SEMICOLON {to_tdecl (DeclProcedure (i,p,d,ins),$startpos,$endpos)}
+      BEGIN ins = instrs_ END SEMICOLON
+        {to_tdecl (DeclProcedure (i,p,d,ins),$startpos,$endpos)}
     | FUNCTION i = IDENT p = params RETURN t=typ IS d = list(decl)
-      BEGIN ins = instrs_ END i2 = IDENT SEMICOLON {
+      BEGIN ins = instrs_ END i2 = IDENT SEMICOLON
+        {
           if (String.lowercase i) = (String.lowercase i2) then
             to_tdecl (DeclFunction (i,p,t,d,ins),$startpos,$endpos)
           else (raise (Error ("Erreur de nommage: "^i^" != "^i2^"\n")))
         }
     | FUNCTION i = IDENT p = params RETURN t=typ IS d = list(decl)
-      BEGIN ins = instrs_ END SEMICOLON {to_tdecl (DeclFunction (i,p,t,d,ins),$startpos,$endpos)}
+      BEGIN ins = instrs_ END SEMICOLON
+        {to_tdecl (DeclFunction (i,p,t,d,ins),$startpos,$endpos)}
 ;
 idents_:
   | i = separated_nonempty_list(COMMA, IDENT) {i}
@@ -120,35 +130,51 @@ exprs_:
 ;
 
 expr:
-  | i = INT {to_texpr (EInt i,$startpos,$endpos)}
-  | c = CHR {to_texpr (EChar c,$startpos,$endpos)}
-  | TRUE {to_texpr (ETrue,$startpos,$endpos)}
-  | FALSE {to_texpr (EFalse,$startpos,$endpos)}
-  | NULL {to_texpr (ENull,$startpos,$endpos)}
-  | a = acces {to_texpr (EAccess a,$startpos,$endpos)}
-  | e1 = expr o = operateur e2 = expr {to_texpr (EOp(e1,o,e2),$startpos,$endpos)}
-  | NOT e = expr {to_texpr (ENot e,$startpos,$endpos)}
-  | NEW i = IDENT {to_texpr (ENew i,$startpos,$endpos)}
-  | MINUS e = expr {to_texpr (EMinus e,$startpos,$endpos)}
-  | i=IDENT LP e=exprs_ RP {to_texpr (EEval (i,e),$startpos,$endpos)}
-  | LP e=expr RP {e}
-  | CHARACTVAL LP e=expr RP {to_texpr (EChr e,$startpos,$endpos)}
+  | i = INT
+      {to_texpr (EInt i,$startpos,$endpos)}
+  | c = CHR
+      {to_texpr (EChar c,$startpos,$endpos)}
+  | TRUE
+      {to_texpr (ETrue,$startpos,$endpos)}
+  | FALSE
+      {to_texpr (EFalse,$startpos,$endpos)}
+  | NULL
+      {to_texpr (ENull,$startpos,$endpos)}
+  | a = acces
+      {to_texpr (EAccess a,$startpos,$endpos)}
+  | e1 = expr o = operateur e2 = expr
+      {to_texpr (EOp(e1,o,e2),$startpos,$endpos)}
+  | NOT e = expr
+      {to_texpr (ENot e,$startpos,$endpos)}
+  | NEW i = IDENT
+      {to_texpr (ENew i,$startpos,$endpos)}
+  | MINUS e = expr
+      {to_texpr (EMinus e,$startpos,$endpos)}
+  | i=IDENT LP e=exprs_ RP
+      {to_texpr (EEval (i,e),$startpos,$endpos)}
+  | LP e=expr RP
+      {e}
+  | CHARACTVAL LP e=expr RP
+      {to_texpr (EChr e,$startpos,$endpos)}
 ;
 
 instr:
-  | a = acces ASSIGN e = expr SEMICOLON {to_tinstr (IAssign (a,e),$startpos,$endpos)}
-  | i = IDENT SEMICOLON {to_tinstr (IEval (i,[]),$startpos,$endpos)}
-  | i = IDENT LP e = exprs_ RP SEMICOLON {to_tinstr (IEval (i,e),$startpos,$endpos)}
-  | RETURN SEMICOLON {to_tinstr (IReturn None,$startpos,$endpos)}
-  | RETURN e=expr SEMICOLON {to_tinstr (IReturn (Some e),$startpos,$endpos)}
-  | BEGIN i=instrs_ END SEMICOLON {to_tinstr (IScope i,$startpos,$endpos)}
-  | IF e = expr THEN i=instrs_
-    eif = elsifs
-    ELSE i3=instrs_
-    END IF SEMICOLON {to_tinstr (IConditional (e,i,eif,Some i3),$startpos,$endpos)}
-  | IF e = expr THEN i=instrs_
-      eif = elsifs
-      END IF SEMICOLON {to_tinstr (IConditional (e,i,eif,None),$startpos,$endpos)}
+  | a = acces ASSIGN e = expr SEMICOLON
+      {to_tinstr (IAssign (a,e),$startpos,$endpos)}
+  | i = IDENT SEMICOLON
+      {to_tinstr (IEval (i,[]),$startpos,$endpos)}
+  | i = IDENT LP e = exprs_ RP SEMICOLON
+      {to_tinstr (IEval (i,e),$startpos,$endpos)}
+  | RETURN SEMICOLON
+      {to_tinstr (IReturn None,$startpos,$endpos)}
+  | RETURN e=expr SEMICOLON
+      {to_tinstr (IReturn (Some e),$startpos,$endpos)}
+  | BEGIN i=instrs_ END SEMICOLON
+      {to_tinstr (IScope i,$startpos,$endpos)}
+  | IF e = expr THEN i=instrs_ eif = elsifs ELSE i3=instrs_ END IF SEMICOLON
+      {to_tinstr (IConditional (e,i,eif,Some i3),$startpos,$endpos)}
+  | IF e = expr THEN i=instrs_ eif = elsifs END IF SEMICOLON
+      {to_tinstr (IConditional (e,i,eif,None),$startpos,$endpos)}
   | FOR i = IDENT IN REVERSE e1 = expr DOTDOT e2 = expr
     LOOP ins=instrs_ END LOOP SEMICOLON
       {to_tinstr (IFor (i,true,e1,e2,ins),$startpos,$endpos)}
@@ -156,7 +182,7 @@ instr:
     LOOP ins=instrs_ END LOOP SEMICOLON
       {to_tinstr (IFor (i,false,e1,e2,ins),$startpos,$endpos)}
   | WHILE e = expr LOOP ins = instrs_ END LOOP SEMICOLON
-    {to_tinstr (IWhile (e,ins),$startpos,$endpos)}
+      {to_tinstr (IWhile (e,ins),$startpos,$endpos)}
 ;
 instrs_:
   | i = nonempty_list(e = instr {e}) {i}

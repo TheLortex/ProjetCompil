@@ -54,8 +54,11 @@ rule token = parse
   | digit+ as s {
     try
       let i = int_of_string s in
-        if i > - Int32.to_int Int32.min_int || i < Int32.to_int Int32.min_int then (print_int i;raise (LexingError 'i'))
-        else INT (int_of_string s)
+      let borne = -Int32.to_int Int32.min_int in
+      if i > borne || i < -borne then
+        (print_int i;raise (LexingError 'i'))
+      else
+        INT (int_of_string s)
     with
       | Failure _ -> raise (LexingError 'i')}
   | identchr as s {let s = String.lowercase s in

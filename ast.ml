@@ -12,7 +12,8 @@ type ident_level = int * string
 module Ident_level =
 struct
   type t = ident_level
-  let compare (l1,s1) (l2,s2) =(if l1 = l2 then String.compare s1 s2 else (l1-l2))
+  let compare (l1,s1) (l2,s2) =
+    (if l1 = l2 then String.compare s1 s2 else (l1-l2))
 end
 
 
@@ -43,7 +44,8 @@ type env = {
   records_to_check: ident list
 }
 
-let empty = {types = Lmap.empty; vars = Smap.empty; idents = []; records_to_check = []}
+let empty =
+  {types = Lmap.empty; vars = Smap.empty; idents = []; records_to_check = []}
 
 type status = int Smap.t
 
