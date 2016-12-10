@@ -51,7 +51,9 @@ let rec get_expr_mode env texpr lb le = match texpr.expr with
   | EAccess (Some e, ident) -> get_expr_mode env e lb le
   | _ -> ModeNone
 
-let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) =
+(*Vérifie la compatibilité des paramètres.*)
+let check_type env lb le l1 l2 =
+  let rec typing_correctness inout_vars (l1 : tparam list) (l2 : texpr list)  =
   match l1,l2 with
   | [],[] -> true
   | _,[] -> false
@@ -61,31 +63,40 @@ let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) =
       begin
         let expr_mode = get_expr_mode env t2 lb le in
         if est_valeur_gauche env t2 lb le && expr_mode != ModeIn then
-          check_type env lb le q1 q2
+          begin
+            if List.mem t2.expr inout_vars then
+              (message_erreur lb le ("writable actual for "^x^" is overlapped");
+               let _ = typing_correctness inout_vars q1 q2 in ();
+               false)
+            else
+              typing_correctness (t2.expr::inout_vars) q1 q2
+          end
         else begin
           if not(est_valeur_gauche env t2 lb le) then
             (message_erreur lb le
                ("parameter "^x^
           " is declared 'in out' but the given expression isn't a left-value.");
-             (let _ = check_type env lb le q1 q2 in ());
+             (let _ = typing_correctness inout_vars q1 q2 in ());
              false)
           else
             (message_erreur lb le
                ("parameter "^x^
                 " is declared in out but the given expression is declared in.");
-             (let _ = check_type env lb le q1 q2 in ());
+             (let _ = typing_correctness inout_vars q1 q2 in ());
              false)
         end
       end
     else
-      check_type env lb le q1 q2
+      typing_correctness inout_vars q1 q2
   | ((x,_,t1)::q1),(t2::q2) ->
     if t2.typ != TypeError && t1 != TypeError then
       message_erreur lb le
         ("type mismatch for parameter "^x^": "^
          (p_typ t1)^" != "^(p_typ t2.typ));
-    (let _ = check_type env lb le q1 q2 in ());
+    (let _ = typing_correctness inout_vars q1 q2 in ());
     false
+  in
+  typing_correctness [] l1 l2
 
 let add_ident lb le env i =
   if List.mem i env.idents then
