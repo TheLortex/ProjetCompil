@@ -31,8 +31,7 @@ let check_records lb le env =
          | TRecordDef recd ->
            if Smap.is_empty recd then
              (message_erreur lb le
-                ("record "^ident^" is declared but hasn't been defined before
-going to another declaration level.");
+                ("record "^ident^" is declared but hasn't been defined before going to another declaration level.");
               false)
            else ok
         | _ -> ok)
@@ -60,6 +59,9 @@ let rec type_decl env tdecl niveau =
     else
       begin
         let ok1,_,lvl = find_record env y in
+        if not(ok1) then
+          (message_erreur lb le
+             ("record "^y^" is not declared."));
         let nenv, ok2 = add_type lb le env x (TAccessRecord (lvl,y)) niveau in
         nenv, ok1&&ok2, tdecl
       end

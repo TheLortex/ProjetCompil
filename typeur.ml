@@ -65,13 +65,14 @@ let rec check_type env lb le (l1 : tparam list) (l2 : texpr list) =
         else begin
           if not(est_valeur_gauche env t2 lb le) then
             (message_erreur lb le
-               ("parameter "^x^" is declared 'in out' but the given expression
-isn't a left-value.");
+               ("parameter "^x^
+          " is declared 'in out' but the given expression isn't a left-value.");
              (let _ = check_type env lb le q1 q2 in ());
              false)
           else
-            (message_erreur lb le ("parameter "^x^" is declared in out but the
-given expression is declared in.");
+            (message_erreur lb le
+               ("parameter "^x^
+                " is declared in out but the given expression is declared in.");
              (let _ = check_type env lb le q1 q2 in ());
              false)
         end
