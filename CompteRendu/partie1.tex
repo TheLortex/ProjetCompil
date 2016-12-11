@@ -27,6 +27,10 @@
   Les informations sauvegardées dans l'AST décoré envoyé en retour sont donc: les types intermédiaires pour les expressions, les types de retour pour les instructions.
   Pour les déclarations, l'important est de sauvegarder l'environnement d'exécution pour chaque déclaration de fonction.
   Ainsi lorsque qu'une fonction est déclarée, on récupère l'environnement induit par les déclarations dans la fonction et on le sauvegarde pour l'exécution des instructions.
+  \subsection{Localisation et propagation des erreurs}
+  La localisation se fait pendant le parsing de Menhir grâce aux variables \texttt{\$startpos} et \texttt{\$endpos}.
+  Des erreurs typage peuvent arriver un peu partout dans l'arbre de syntaxe abstraite, elles sont propagées soit par un type de retour \texttt{TypeError} soit par un booléan mis à \texttt{false}.
+  Par ailleurs, l'ensemble de l'arbre de syntaxe est parcouru pendant le typage, même si une erreur a eu lieu à un certain moment. 
   \section{Choix et problèmes rencontrés}
   \subsection{Problèmes de visualisation}
   Il est intéressant de pouvoir visualiser le comportement de l'analyse syntaxique et du typage de manière simple et intuitive.
