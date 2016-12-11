@@ -1,7 +1,6 @@
 open Ast
 open Printf
 open Lexing
-open Ast_printer
 
 
 let teq t1 t2 = match t1,t2 with

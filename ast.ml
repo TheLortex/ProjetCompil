@@ -118,3 +118,32 @@ and typ_ =
   | TIdent of ident
   | TAccess of ident
 and param = (ident list) * (mode option)* typ_
+
+let rec p_typ = function
+  | Tint -> "int"
+  | Tchar -> "char"
+  | Tbool -> "bool"
+  | TypeNull -> "null"
+  | TRecord (i,r) -> "record("^r^")"
+  | TAccessRecord (i,r) -> "access("^r^")"
+  | TypeError -> "ERR"
+  | TypeNone -> "none"
+  | TType (i,t) -> "type "^t
+  | _ -> "def"
+
+let p_op = function
+  | OpAnd -> "and"
+  | OpAndThen -> "and then"
+  | OpOr -> "or"
+  | OpOrElse -> "or else"
+  | OpDiv -> "/"
+  | OpMinus -> "-"
+  | OpPlus -> "+"
+  | OpTimes -> "*"
+  | OpRem -> "rem"
+  | OpEq -> "="
+  | OpNeq -> "!="
+  | OpGt -> ">"
+  | OpGet -> ">="
+  | OpLt -> "<"
+  | OpLet -> "<="

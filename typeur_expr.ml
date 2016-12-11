@@ -1,6 +1,5 @@
 open Typeur
 open Ast
-open Ast_printer
 
 let rec type_expr env (texpr : texpr) =
   let lb = texpr.lb and le = texpr.le in

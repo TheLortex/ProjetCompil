@@ -2,11 +2,10 @@ open Typeur_expr
 open Typeur_instr
 open Typeur
 open Ast
-open Ast_printer
 
 let get_type env lb le i =
   let id = String.lowercase (match i with |TIdent x |TAccess x -> x) in
-  begin
+  begin 
       match find_type env id lb le with
       | TRecord ident ->
         begin

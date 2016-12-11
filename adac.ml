@@ -3,7 +3,6 @@ open Parser
 open Lexer
 open Lexing
 open Printf
-open Ast_printer
 open Typeur_programme
 
 let parse_only = ref false
@@ -13,7 +12,7 @@ let speclist = [
   ("--parse-only", Arg.Set parse_only, "Parse only.");
   ("--type-only", Arg.Set type_only, "Parse and type only.")
 ]
-let msg = "0b101010: available parameters."
+let msg = "adac: available parameters."
 let () = Arg.parse speclist (fun anon -> file := anon) msg
 
 let f = open_in (!file)
@@ -32,7 +31,6 @@ let ex =
          else
           begin
             let ok, program = typeur !file program in
-            print_program program;
             if ok then exit(0) else exit(1)
           end )
     with

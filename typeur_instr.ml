@@ -1,7 +1,6 @@
 open Typeur_expr
 open Typeur
 open Ast
-open Ast_printer
 
 let rec type_instr ret env (tinstr : tinstr) =
   let lb = tinstr.lb and le = tinstr.le in

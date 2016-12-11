@@ -17,35 +17,6 @@ let edge ?(color="black")  id1 id2 = Stmt_edge
 let _id = ref(0)
 let next_id () = _id := !_id + 1; string_of_int !_id
 
-let rec p_typ = function
-  | Tint -> "int"
-  | Tchar -> "char"
-  | Tbool -> "bool"
-  | TypeNull -> "null"
-  | TRecord (i,r) -> "record("^r^")"
-  | TAccessRecord (i,r) -> "access("^r^")"
-  | TypeError -> "ERR"
-  | TypeNone -> "none"
-  | TType (i,t) -> "type "^t
-  | _ -> "def"
-
-let p_op = function
-  | OpAnd -> "and"
-  | OpAndThen -> "and then"
-  | OpOr -> "or"
-  | OpOrElse -> "or else"
-  | OpDiv -> "/"
-  | OpMinus -> "-"
-  | OpPlus -> "+"
-  | OpTimes -> "*"
-  | OpRem -> "rem"
-  | OpEq -> "="
-  | OpNeq -> "!="
-  | OpGt -> ">"
-  | OpGet -> ">="
-  | OpLt -> "<"
-  | OpLet -> "<="
-
 let lst = ref([])
 
 let add n = (lst := n::(!lst))
