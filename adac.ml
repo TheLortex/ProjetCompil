@@ -15,7 +15,9 @@ let speclist = [
 let msg = "adac: available parameters."
 let () = Arg.parse speclist (fun anon -> file := anon) msg
 
-let f = open_in (!file)
+let f = try open_in (!file)
+        with | Sys_error(s) -> fprintf stderr "Error opening file. %s" (!file) s; exit(2)
+
 let buf = Lexing.from_channel f
 let () = buf.lex_curr_p <- {buf.lex_curr_p with pos_fname = !file}
 

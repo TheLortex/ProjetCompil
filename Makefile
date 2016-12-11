@@ -5,4 +5,4 @@ dot: adac_dot.ml ast_printer.ml ast.ml lexer.mll parser.mly typeur_decl.ml typeu
 	ocamlbuild adac_dot.byte -use-menhir -use-ocamlfind -pkg dot;mv adac_dot.byte adac
 
 clean:
-	rm -r _build/; rm adac
+	rm -rf _build/; rm -f adac
