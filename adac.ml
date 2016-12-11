@@ -3,6 +3,7 @@ open Parser
 open Lexer
 open Lexing
 open Printf
+
 open Typeur_programme
 
 let parse_only = ref false
@@ -14,7 +15,6 @@ let speclist = [
 ]
 let msg = "Usage: adac filename [parameters] \nAvailable parameters."
 let () = Arg.parse speclist (fun anon -> file := anon) msg; if !file = "" then (Arg.usage speclist msg; exit(2))
-
 
 let f = open_in (!file)
 
@@ -33,6 +33,7 @@ let ex =
          else
           begin
             let ok, program = typeur !file program in
+
             if ok then exit(0) else exit(1)
           end )
     with

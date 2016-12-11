@@ -13,7 +13,7 @@ let speclist = [
   ("--parse-only", Arg.Set parse_only, "Parse only.");
   ("--type-only", Arg.Set type_only, "Parse and type only.")
 ]
-let msg = "adac: available parameters."
+let msg = "Usage: adac filename [parameters] \nAvailable parameters."
 let () = Arg.parse speclist (fun anon -> file := anon) msg; if !file = "" then (Arg.usage speclist msg; exit(2))
 
 let f = open_in (!file)
