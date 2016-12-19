@@ -20,7 +20,7 @@ procedure Print_int is
 begin
    PrintsInt(-2147483648);
    New_Line;
-   for N in (-17) .. 42 loop
+   for N in 32 .. 42 loop
       Printsint(N);
       New_Line;
    end loop;
@@ -31,3 +31,4 @@ end;
 --  Local Variables:
 --  compile-command: "gnatmake print_int.adb && ./print_int"
 --  End:
+

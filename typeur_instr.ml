@@ -173,11 +173,12 @@ let rec type_instr ret env niveau (tinstr : tinstr) =
   | IFor (x,reverse,e1, e2, instrs) ->
     let env = {env with vars = Smap.remove x env.vars; idents = List.filter (fun s -> s != x) env.idents} in
     let ne1 = type_expr env e1 and ne2 = type_expr env e2 in
-    let env, ok = add_var lb le env x Tint ModeIn niveau in
+    let env = {env with current_offset = env.current_offset - 8} in
+    let env, ok = add_var lb le env x Tint ModeIn (niveau+1) false in
     let m,e = type_list_instr ret env niveau instrs in
     let errflag =
       if teq ne1.typ Tint && teq ne2.typ Tint && e != TypeError && ok then
-        TypeNone
+        TypeNoneWithEnv env
       else
         (if(not(teq ne1.typ Tint && teq ne2.typ Tint) &&
             ne1.typ != TypeError && ne2.typ != TypeError) then

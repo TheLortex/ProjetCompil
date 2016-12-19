@@ -24,6 +24,6 @@ let typeur fname (i, decls, instrs) =
             begin
               if not(ok) then
                 fprintf stderr "fatal error: program can't be typed.\n";
-              ok,(i, ndecls, ninstrs),fenv
+              ok,(i, ndecls, ninstrs),ntree.env
             end
     | _ -> failwith "wat"

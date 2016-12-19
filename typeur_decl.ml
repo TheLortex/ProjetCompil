@@ -130,7 +130,7 @@ let rec type_decl env tdecl niveau =
     let vtype = get_type env lb le typ_  in
     if not(teq vtype TypeError) then
       let env, ok = List.fold_left (fun (env_,ok_) x ->
-          let env_,ok = add_var lb le env_ x vtype ModeInOut niveau in
+          let env_,ok = add_var lb le env_ x vtype ModeInOut niveau false in
           env_, ok && ok_) (env,not(autoshadow)) xlist in
       env, ok, tdecl
     else
@@ -145,7 +145,7 @@ let rec type_decl env tdecl niveau =
     let nexpr = type_expr env expr and vtype = get_type env lb le typ_ in
     if teq nexpr.typ vtype then
       let env, ok = List.fold_left (fun (env_,ok_) x ->
-        let env_, ok = add_var lb le env_ x vtype ModeInOut niveau in
+        let env_, ok = add_var lb le env_ x vtype ModeInOut niveau false in
         env_, ok && ok_) (env,not(autoshadow)) xlist in
       env,ok, {tdecl with decl = Decl (xlist,typ_,Some nexpr)}
     else
@@ -199,13 +199,13 @@ let rec type_decl env tdecl niveau =
         match m with
         | Some m_ ->
           let ev, ek_ =
-            add_var lb le ev i t m_ niveau in ev, ek_ && ek
+            add_var lb le ev i t m_ (niveau+1) true in ev, ek_ && ek
         | None ->
           let ev, ek_ =
-            add_var lb le ev i t ModeIn niveau in ev, ek_ && ek) (nenv,ok) tparams in
-    let nenv, err_d, ndecl = type_decl_list nenv decls (niveau+1) in
-    let chk_records = chk_records && check_records lb le nenv in
-    let ninstr, err_i = type_list_instr ret nenv niveau instrs in
+            add_var lb le ev i t ModeIn (niveau+1) true in ev, ek_ && ek) (nenv,ok) tparams in
+    let fenv, err_d, ndecl = type_decl_list nenv decls (niveau+1) in
+    let chk_records = chk_records && check_records lb le fenv in
+    let ninstr, err_i = type_list_instr ret fenv niveau instrs in
     let err_r =
       (if check_return instrs then
          ok
@@ -220,7 +220,7 @@ let rec type_decl env tdecl niveau =
     nenv,
     chk_records && err_d && err_i != TypeError && err_r && nerr,
     {tdecl with
-     env = nenv;
+     env = fenv;
      decl = DeclFunction (i,params,rettyp_,ndecl,ninstr)
     }
 

@@ -5,28 +5,74 @@ open Printf
 open Compile_expr
 open Compile
 
-let rec compile_instr niveau decl_env =
-  let rec comprec = function
-    | IEval (i, lexpr) ->
-      let ret_typ, params, level = match (Smap.find i decl_env.vars).typ with
-        | TFunction (r,p,l) -> r,p,l
+let rec compile_instr niveau decl_env = print_string ("instr("^(string_of_int niveau)^")\n");
+  let rec comprec tinstr =
+    match tinstr.instr with
+    | IEval (i, lexpr) ->print_string "eval\n";
+      let ret_typ, params, level =
+        match (try (Smap.find i decl_env.vars).typ with |Not_found -> print_string ("\nb "^i^"\n");TypeNone) with
+        | TFunction (r,p,l) ->print_string (i^" found.\n"); r,p,l
       in
       let rec frame_size = function
         | [] -> 0
         | (_,_,p)::q -> type_size decl_env p + frame_size q
       in
       List.fold_left (*Empilement des paramètres*)
-        (fun acc e -> acc ++ compile_expr niveau decl_env e.expr) nop lexpr ++
+        (fun acc e -> print_int 0; compile_expr true niveau decl_env e ++ acc) nop lexpr ++
       movq (reg rbp) (reg rsi) ++
-      iter (niveau - level - 1) (movq (ind ~ofs:16 rsi) (reg rsi)) ++ (*Empilement du pointeur vers le tableau d'activation de la fonction*)
+      iter (niveau - level) (movq (ind ~ofs:16 rsi) (reg rsi)) ++ (*Empilement du pointeur vers le tableau d'activation de la fonction*)
       pushq (reg rsi) ++
       call (i^"_"^(string_of_int level)) ++ (*Appel de la procédure*)
       addq (imm (8+frame_size params)) (reg rsp) (*Dépilage*)
+    | IConditional(texpr,instrsthen,[],q) ->print_string "conditionalend\n";
+      let i1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) and e1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) in
+      compile_expr false niveau decl_env texpr ++
+      popq rax ++
+      cmpq (imm 1) (reg rax) ++
+      je i1 ++
+      begin
+        match q with
+        | None -> nop
+        | Some instrs -> compile_instrs niveau decl_env instrs
+      end ++
+      jmp e1 ++
+      label i1 ++
+      compile_instrs niveau decl_env instrsthen ++
+      label e1
+    | IConditional(texpr,instrsthen,elsifs,q) -> print_string "conditional\n";
+      let i1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) and e1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) in
+      compile_expr false niveau decl_env texpr ++
+      popq rax ++
+      cmpq (imm 1) (reg rax) ++
+      je i1 ++
+      begin
+        let nexpr, ninstr = List.hd elsifs in
+        comprec {tinstr with instr = (IConditional(nexpr,ninstr,List.tl elsifs,q))}
+      end ++
+      jmp e1 ++
+      label i1 ++
+      compile_instrs niveau decl_env instrsthen ++
+      label e1
+    | IFor(x,reverse,expr1,expr2,instrs) ->print_string "for\n";
+      let decl_env = match tinstr.typ with | TypeNoneWithEnv e -> e in
+      let forlabel = "for_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
+      let forlabel2 = "for_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
+      compile_expr false niveau decl_env expr2 ++
+      compile_expr false niveau decl_env expr1 ++
+      jmp forlabel2 ++
+      label forlabel ++
+      compile_instrs niveau decl_env instrs ++
+      addq (imm 1) (ind rsp) ++
+      label forlabel2 ++
+      movq (ind ~ofs:8 rsp) (reg rax) ++
+      cmpq (reg rax) (ind rsp) ++
+      jle  forlabel ++
+      addq (imm 16) (reg rsp)
 
-
+    | IReturn None -> (movq (reg rbp) (reg rsp) ++ popq rbp) ++ ret
     | _ -> nop
   in
   comprec
 and compile_instrs niveau decl_env = function
   | [] -> nop
-  | p::q -> (compile_instr niveau decl_env p.instr) ++ compile_instrs niveau decl_env q
+  | p::q -> (compile_instr niveau decl_env p) ++ compile_instrs niveau decl_env q

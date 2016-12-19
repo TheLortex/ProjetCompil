@@ -13,6 +13,7 @@ procedure NQueens is
    Empty: Integer := 0;
    function Mem(X, S: Integer) return Boolean is
    begin
+      -- X est une puissance de 2
       return (S / X) rem 2 = 1;
    end;
    -- décompte récursif
@@ -47,3 +48,4 @@ end;
 --  Local Variables:
 --  compile-command: "gnatmake queens.adb && ./queens"
 --  End:
+

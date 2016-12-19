@@ -31,7 +31,7 @@ let ex =
            exit(0)
          else
           begin
-            let ok, program = typeur !file program in
+            let ok, program,_ = typeur !file program in
             print_program program;
             if ok then exit(0) else exit(1)
           end )

@@ -224,9 +224,16 @@ let find_type env type_ident lb le =
          TypeError)
     end
 
-let add_var lb le env ident typ mode niveau =
-  let env = {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.current_offset;} env.vars;
-                      current_offset = env.current_offset + type_size env typ} in
+let add_var lb le env ident typ mode niveau isparam =
+  let env =
+    if isparam then
+      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.param_offset;} env.vars;
+              param_offset = env.param_offset + type_size env typ}
+    else
+      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.current_offset;} env.vars;
+                current_offset = env.current_offset - type_size env typ}
+
+  in
   add_ident lb le env ident
 
 let add_type lb le env ident typ niveau =
