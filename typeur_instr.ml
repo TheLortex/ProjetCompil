@@ -2,7 +2,7 @@ open Typeur_expr
 open Typeur
 open Ast
 
-let rec type_instr ret env (tinstr : tinstr) =
+let rec type_instr ret env niveau (tinstr : tinstr) =
   let lb = tinstr.lb and le = tinstr.le in
   match tinstr.instr with
   | IAssign ((None, ident),expr) ->
@@ -84,7 +84,7 @@ let rec type_instr ret env (tinstr : tinstr) =
        )
     }
   | IEval (ident,lexprs) ->
-    let (return, params) = find_function env ident tinstr.lb tinstr.le in
+    let (return, params,_) = find_function env ident tinstr.lb tinstr.le in
     let ntexprs = List.map (fun expr -> type_expr env expr) lexprs in
     {tinstr with
      instr = IEval(ident,ntexprs);
@@ -130,7 +130,7 @@ let rec type_instr ret env (tinstr : tinstr) =
        )
     }
   | IScope linstr ->
-    let m,err = type_list_instr ret env linstr in
+    let m,err = type_list_instr ret env niveau linstr in
     {tinstr with
      instr = IScope m;
      typ = err}
@@ -144,7 +144,7 @@ let rec type_instr ret env (tinstr : tinstr) =
                 (p_typ texpr_cdn.typ)^" != bool.");
            TypeError))
     in
-    let nlinstr_then, nerr = type_list_instr ret env linstr_then in
+    let nlinstr_then, nerr = type_list_instr ret env niveau linstr_then in
     let () =
       if teq nerr TypeError then
         (errflag := TypeError)
@@ -152,7 +152,7 @@ let rec type_instr ret env (tinstr : tinstr) =
     let nlinstrs_elseif =
       List.map
         (fun (expr,lst) ->
-           let m,r = type_list_instr ret env lst
+           let m,r = type_list_instr ret env niveau lst
            and nexpr = type_expr env expr in
            if teq r TypeError then errflag := TypeError; nexpr, m)
         linstrs_elseif
@@ -160,7 +160,7 @@ let rec type_instr ret env (tinstr : tinstr) =
     let nlinstrs_else =
       match linstrs_else with
       | Some tlist -> begin
-        let m,r = type_list_instr ret env tlist in
+        let m,r = type_list_instr ret env niveau tlist in
         if teq r TypeError then (errflag := TypeError);Some m
       end
       | _ -> None
@@ -171,10 +171,10 @@ let rec type_instr ret env (tinstr : tinstr) =
      typ = !errflag
     }
   | IFor (x,reverse,e1, e2, instrs) ->
-    let env = {env with vars = Smap.remove x env.vars} in
+    let env = {env with vars = Smap.remove x env.vars; idents = List.filter (fun s -> s != x) env.idents} in
     let ne1 = type_expr env e1 and ne2 = type_expr env e2 in
-    let env, ok = {env with vars = Smap.add x (Tint,ModeIn) env.vars}, true in
-    let m,e = type_list_instr ret env instrs in
+    let env, ok = add_var lb le env x Tint ModeIn niveau in
+    let m,e = type_list_instr ret env niveau instrs in
     let errflag =
       if teq ne1.typ Tint && teq ne2.typ Tint && e != TypeError && ok then
         TypeNone
@@ -191,7 +191,7 @@ let rec type_instr ret env (tinstr : tinstr) =
      typ = errflag}
   | IWhile (texpr, instrs) ->
     let ne = type_expr env texpr in
-    let m,e = type_list_instr ret env instrs in
+    let m,e = type_list_instr ret env niveau instrs in
     let errflag =
       if teq ne.typ Tbool && not(teq e TypeError) then
         TypeNone
@@ -205,8 +205,8 @@ let rec type_instr ret env (tinstr : tinstr) =
      instr = IWhile(texpr, instrs);
      typ = errflag}
 
-and type_list_instr ret env linstr =
-  let m = List.map (fun instr -> type_instr ret env instr) linstr in
+and type_list_instr ret env niveau linstr =
+  let m = List.map (fun instr -> type_instr ret env niveau instr) linstr in
   let err = List.fold_left
       (fun a b -> if teq b.typ TypeError || teq a TypeError then
           TypeError

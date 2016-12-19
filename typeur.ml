@@ -9,6 +9,9 @@ let teq t1 t2 = match t1,t2 with
   | t1,t2 when t1 = t2 -> true
   | _,_ -> false
 
+
+
+
 let message_erreur lb le message =
   let print_position pos1 pos2 =
     fprintf stderr "File \"%s\", line %d, characters %d-%d"
@@ -22,7 +25,7 @@ let message_erreur lb le message =
 
 let find_var_mode env ident lb le  =
   try
-    let _,m = Smap.find ident env.vars in m
+    (Smap.find ident env.vars).mode
   with
   | Not_found ->
     message_erreur lb le
@@ -106,11 +109,11 @@ let add_ident lb le env i =
 
 let find_var env ident lb le  =
   try
-    let t,_ = Smap.find ident env.vars in
+    let t = (Smap.find ident env.vars).typ in
     begin
       match t with
-      | TFunction (ret,[]) -> ret
-      | TFunction (ret, p) ->
+      | TFunction (ret,[],_) -> ret
+      | TFunction (ret, p,_) ->
         message_erreur lb le
           ("function "^ident^" requires parameters."); TypeError
       | TType _ -> message_erreur lb le (ident^" is a type.");TypeError
@@ -145,13 +148,13 @@ let rec find_record_field env (level,ident) x lb le =
 let find_function env ident lb le =
   try
     begin
-      match Smap.find ident env.vars with
-      | TFunction f,_ -> f
-      | _,_ -> TypeError, []
+      match (Smap.find ident env.vars).typ with
+      | TFunction f -> f
+      | _ -> TypeError, [], 0
     end
   with
   | Not_found -> message_erreur lb le ("function "^ident^" is not declared.");
-    TypeError, []
+    TypeError, [], 0
 
 let get_record_def env (level,ident) =
   try
@@ -163,11 +166,24 @@ let get_record_def env (level,ident) =
   with
   | Not_found -> Smap.empty
 
+  (* Taille du type en octets *)
+let rec type_size env = function
+  | Tchar -> 8 (*TODO: Optimize*)
+  | Tbool -> 8
+  | Tint -> 8
+  | TypeNull -> 8
+  | TAccessRecord _ -> 8
+  | TRecord id ->
+    let recd = get_record_def env id in
+    let size_field _ tfield total = total + type_size env tfield in
+    Smap.fold size_field recd 0
+  | _ -> 0
+
 let find_record env ident =
   try
     begin
-      match Smap.find ident env.vars with
-      | TType (lvl,ident),_ -> true, get_record_def env (lvl,ident), lvl
+      match (Smap.find ident env.vars).typ with
+      | TType (lvl,ident) -> true, get_record_def env (lvl,ident), lvl
       | _ -> false, Smap.empty, 0
     end
   with
@@ -185,8 +201,8 @@ let get_custom_type env (lvl,ident) = Lmap.find (lvl,ident) env.types
 let find_type env type_ident lb le =
   try
     begin
-      match Smap.find type_ident env.vars with
-      | TType t,_ -> (match get_custom_type env t with
+      match (Smap.find type_ident env.vars).typ with
+      | TType t -> (match get_custom_type env t with
         | TRecordDef _ -> TRecord t
         | x -> x)
       | _ ->
@@ -208,13 +224,14 @@ let find_type env type_ident lb le =
          TypeError)
     end
 
-let add_var lb le env ident typ mode =
-  let env = {env with vars = Smap.add ident (typ,mode) env.vars} in
+let add_var lb le env ident typ mode niveau =
+  let env = {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.current_offset;} env.vars;
+                      current_offset = env.current_offset + type_size env typ} in
   add_ident lb le env ident
 
 let add_type lb le env ident typ niveau =
   let typedef = TType (niveau,ident) in
-  let env = {env with vars = Smap.add ident (typedef, ModeNone) env.vars;
+  let env = {env with vars = Smap.add ident {typ = typedef; mode = ModeNone; level = 0; offset = 0;} env.vars;
                       types = Lmap.add (niveau,ident) typ env.types} in
   add_ident lb le env ident
 
@@ -240,10 +257,10 @@ let add_record_field lb le env ident champ typ niveau =
        ("record "^ident^" is not declared.");
      env,false)
 
-let add_function ?(addid=true) lb le env ident (ret,params) =
+let add_function ?(addid=true) lb le env niveau ident (ret,params) =
   let env       =
     {env with
-     vars = Smap.add ident (TFunction (ret,params), ModeNone) env.vars} in
+     vars = Smap.add ident {typ = TFunction (ret,params,niveau); mode = ModeNone; level = niveau; offset = 0;} env.vars} in
   let env, nok  =
     (if addid then add_ident lb le env ident else env,true)
   in env, nok

@@ -150,7 +150,7 @@ let rec type_expr env (texpr : texpr) =
     }
   (*Appel de fonction ou de procédure*)
   | EEval (ident,exprs) ->
-    let (return, params) = find_function env ident lb le in
+    let (return, params,_) = find_function env ident lb le in
     let n_exprs = List.map (fun expr -> type_expr env expr) exprs in
     {texpr with
       expr = EEval(ident,n_exprs);

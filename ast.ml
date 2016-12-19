@@ -33,19 +33,30 @@ type typ =
   | TRecordDef of recd
   | TType of ident_level
 
-and func = typ * (tparam list)
+and func = typ * (tparam list) * int
 and tparam = ident * (mode option) * typ
 and recd = typ Smap.t
+and vard = {
+  typ: typ;
+  mode: mode;
+  level: int;
+  offset: int;
+}
 
 type env = {
-  vars: (typ * mode) Smap.t;
+  vars: vard Smap.t;
   types: typ Lmap.t;
   idents: ident list;
-  records_to_check: ident list
+  records_to_check: ident list;
+  current_offset: int;
 }
 
 let empty =
-  {types = Lmap.empty; vars = Smap.empty; idents = []; records_to_check = []}
+  {types = Lmap.empty;
+   vars = Smap.empty;
+   idents = [];
+   records_to_check = [];
+   current_offset = 0;}
 
 type status = int Smap.t
 

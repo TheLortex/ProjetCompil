@@ -5,6 +5,8 @@ open Lexing
 open Printf
 open Typeur_programme
 
+open Compile_programme
+
 let parse_only = ref false
 let type_only = ref false
 let file = ref ""
@@ -29,9 +31,12 @@ let ex =
          if !parse_only then
            exit(0)
          else
-          begin 
-            let ok, program = typeur !file program in
-            if ok then exit(0) else exit(1)
+          begin
+            let ok, program, env = typeur !file program in
+            if ok then begin
+              compile env program; exit(0)
+            end
+              else exit(1)
           end )
     with
     | Parser.Error ->
