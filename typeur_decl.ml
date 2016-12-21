@@ -11,7 +11,7 @@ let get_type env lb le i =
         begin
           match i with
           | TIdent x ->
-            if (let _,recd,_ = find_record env x in Smap.is_empty recd) then
+            if (let _,recd,_ = find_record env x in Smap.is_empty recd.recd) then
               (TypeError)
             else
               (TRecord ident)
@@ -28,7 +28,7 @@ let check_records lb le env =
       | TType (niveau,ident) ->
         (match get_custom_type env (niveau,ident) with
          | TRecordDef recd ->
-           if Smap.is_empty recd then
+           if Smap.is_empty recd.recd then
              (message_erreur lb le
                 ("record "^ident^" is declared but hasn't been defined before going to another declaration level.");
               false)
@@ -46,7 +46,7 @@ let rec type_decl env tdecl niveau =
   let lb = tdecl.lb and le = tdecl.le in
   match tdecl.decl with
   | DeclType x ->
-    let nenv, ok = add_type lb le env x (TRecordDef Smap.empty) niveau in
+    let nenv, ok = add_type lb le env x (TRecordDef {recd=Smap.empty;rcurrent_offset = 0}) niveau in
     if ok then
       {nenv with
        records_to_check = x::nenv.records_to_check
@@ -99,7 +99,7 @@ let rec type_decl env tdecl niveau =
       nenv_, result && ok
     in
     let r,p,_ = find_record env x in
-    if r && Smap.is_empty p then(*Déclaré non défini.*)
+    if r && Smap.is_empty p.recd then(*Déclaré non défini.*)
       let ok0 = List.for_all (verifier_champ env) champs in
       (let nenv, nok =
          List.fold_left aux_add_field (env,true) champs in
@@ -112,7 +112,7 @@ let rec type_decl env tdecl niveau =
       else (*Non déclaré*)
         begin
           let env_, ok_ =
-            add_type lb le env x (TRecordDef Smap.empty) niveau in
+            add_type lb le env x (TRecordDef {recd=Smap.empty;rcurrent_offset=0}) niveau in
           let ok0 =
             List.for_all (verifier_champ env_) champs in
           let nenv, nok =
@@ -130,7 +130,7 @@ let rec type_decl env tdecl niveau =
     let vtype = get_type env lb le typ_  in
     if not(teq vtype TypeError) then
       let env, ok = List.fold_left (fun (env_,ok_) x ->
-          let env_,ok = add_var lb le env_ x vtype ModeInOut niveau false in
+          let env_,ok = add_var lb le env_ x vtype ModeVar niveau false in
           env_, ok && ok_) (env,not(autoshadow)) xlist in
       env, ok, tdecl
     else
@@ -145,7 +145,7 @@ let rec type_decl env tdecl niveau =
     let nexpr = type_expr env expr and vtype = get_type env lb le typ_ in
     if teq nexpr.typ vtype then
       let env, ok = List.fold_left (fun (env_,ok_) x ->
-        let env_, ok = add_var lb le env_ x vtype ModeInOut niveau false in
+        let env_, ok = add_var lb le env_ x vtype ModeVar niveau false in
         env_, ok && ok_) (env,not(autoshadow)) xlist in
       env,ok, {tdecl with decl = Decl (xlist,typ_,Some nexpr)}
     else

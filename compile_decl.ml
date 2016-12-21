@@ -19,12 +19,25 @@ let compile_decl niveau = print_string ("decl("^(string_of_int niveau)^")\n");
         match p.decl with
         | Decl (ilist,TIdent t,Some expr) ->print_string ("init de "^(List.hd ilist)^" niveau "^(string_of_int niveau)^"\n");
           compile_expr false (niveau+1) decl_env expr ++
-          popq rax ++ (*TODO: Supporter les access*)
-          (List.fold_left
-             (fun s x ->
-                s ++
-                movq (reg rax) (ind ~ofs:(get_var_offset decl_env x) rbp)
-             ) nop ilist) ++
+          (match expr.typ with
+           | TRecord i ->
+             let ts = type_size decl_env (TRecord i) in
+             let c = ref(nop) in
+             for i = 0 to (ts/8-1) do
+               c := !c ++ popq rax ++
+                    (List.fold_left
+                       (fun s x ->
+                          s ++
+                          movq (reg rax) (ind ~ofs:((get_var_offset decl_env x) - 8*i) rbp)
+                       ) nop ilist)
+             done; !c;
+           | _ ->
+                popq rax ++
+                (List.fold_left
+                   (fun s x ->
+                      s ++
+                      movq (reg rax) (ind ~ofs:(get_var_offset decl_env x) rbp)
+                   ) nop ilist)) ++
           locals_init niveau decl_env q
         | Decl (ilist,TAccess t,Some expr) -> print_string ("init de "^(List.hd ilist)^" niveau "^(string_of_int niveau)^"\n");
           compile_expr true (niveau+1) decl_env expr ++

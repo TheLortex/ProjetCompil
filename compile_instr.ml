@@ -15,10 +15,11 @@ let rec compile_instr niveau decl_env = print_string ("instr("^(string_of_int ni
       in
       let rec frame_size = function
         | [] -> 0
+        | (_,Some ModeInOut,p)::q -> 8 + frame_size q
         | (_,_,p)::q -> type_size decl_env p + frame_size q
       in
       List.fold_left (*Empilement des paramètres*)
-        (fun acc e -> print_int 0; compile_expr true niveau decl_env e ++ acc) nop lexpr ++
+        (fun acc (e,(_,m,_)) -> acc ++ compile_expr (match m with |Some ModeInOut -> true | _ -> false) niveau decl_env e) nop (List.combine lexpr params) ++
       movq (reg rbp) (reg rsi) ++
       iter (niveau - level) (movq (ind ~ofs:16 rsi) (reg rsi)) ++ (*Empilement du pointeur vers le tableau d'activation de la fonction*)
       pushq (reg rsi) ++
@@ -70,6 +71,16 @@ let rec compile_instr niveau decl_env = print_string ("instr("^(string_of_int ni
       addq (imm 16) (reg rsp)
 
     | IReturn None -> (movq (reg rbp) (reg rsp) ++ popq rbp) ++ ret
+    | IAssign (access, texpr) ->
+      let ts = type_size decl_env texpr.typ in
+      compile_expr false niveau decl_env texpr ++ (*Résultat de l'expression sur la pile*)
+      compile_expr true niveau decl_env {expr = (EAccess access); typ = texpr.typ; lb=noloc;le=noloc;} ++ (*Adresse de sauvegarde sur la pile*)
+      popq rsi ++ (*On balance l'adresse dans rsi*)
+      (let c = ref(nop) in (*On push le contenu*)
+       for i = 1 to (ts/8) do
+         c := !c ++ (popq rax) ++ movq (reg rax) (ind ~ofs:(-ts+8*i) rsi)
+       done; !c)
+
     | _ -> nop
   in
   comprec

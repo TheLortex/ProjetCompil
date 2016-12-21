@@ -7,6 +7,7 @@ type mode =
   | ModeIn (*Readonly*)
   | ModeInOut (*rw*)
   | ModeNone
+  | ModeVar
 
 type ident_level = int * string
 module Ident_level =
@@ -33,10 +34,12 @@ type typ =
   | TRecordDef of recd
   | TType of ident_level
   | TypeNoneWithEnv of env
-
+and datarec = {rtyp: typ;
+               roffset: int;}
 and func = typ * (tparam list) * int
 and tparam = ident * (mode option) * typ
-and recd = typ Smap.t
+and recd = {recd: datarec Smap.t;
+            rcurrent_offset: int;}
 and vard = {
   typ: typ;
   mode: mode;

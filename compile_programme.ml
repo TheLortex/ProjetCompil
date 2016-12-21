@@ -5,14 +5,10 @@ open Printf
 open Compile_expr
 open Compile_instr
 open Compile_decl
-open Compile
+open Compile 
 open Lexing
 
 let compile fenv (_, decls, instrs) =
-  let noloc = {pos_bol = 0;
-               pos_lnum = 1;
-               pos_cnum = 0;
-               pos_fname = "";} in
   let assembly_text =
     compile_decl 0 {decl = DeclProcedure("main",[],decls,instrs);
                     lb = noloc;

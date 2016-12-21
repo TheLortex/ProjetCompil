@@ -37,7 +37,7 @@ let rec est_valeur_gauche env expr lb le = match expr.expr with
     begin
       match find_var_mode env ident lb le with
         | ModeIn | ModeNone -> false
-        | ModeInOut -> true
+        | ModeInOut | ModeVar -> true
     end
   | EAccess (Some e, ident)-> begin
       match e.typ with
@@ -132,7 +132,7 @@ let rec find_record_field env (level,ident) x lb le =
       | TRecordDef r ->
         begin
           try
-            Smap.find x r
+            (Smap.find x r.recd).rtyp
           with
           | Not_found -> TypeError
         end
@@ -161,10 +161,10 @@ let get_record_def env (level,ident) =
     begin
       match Lmap.find (level,ident) env.types with
       | TRecordDef r -> r
-      | _ -> Smap.empty
+      | _ -> {recd=Smap.empty; rcurrent_offset=0}
     end
   with
-  | Not_found -> Smap.empty
+  | Not_found -> {recd=Smap.empty; rcurrent_offset=0}
 
   (* Taille du type en octets *)
 let rec type_size env = function
@@ -175,8 +175,8 @@ let rec type_size env = function
   | TAccessRecord _ -> 8
   | TRecord id ->
     let recd = get_record_def env id in
-    let size_field _ tfield total = total + type_size env tfield in
-    Smap.fold size_field recd 0
+    let size_field _ tfield total = total + type_size env tfield.rtyp in
+    Smap.fold size_field recd.recd 0
   | _ -> 0
 
 let find_record env ident =
@@ -184,14 +184,14 @@ let find_record env ident =
     begin
       match (Smap.find ident env.vars).typ with
       | TType (lvl,ident) -> true, get_record_def env (lvl,ident), lvl
-      | _ -> false, Smap.empty, 0
+      | _ -> false, {recd=Smap.empty; rcurrent_offset=0}, 0
     end
   with
-  | Not_found -> false, Smap.empty, 0
+  | Not_found -> false, {recd=Smap.empty; rcurrent_offset=0}, 0
 
 let is_record_defined lb le env ident =
   let result, def, _ = find_record env ident in
-  if result then not(Smap.is_empty def)
+  if result then not(Smap.is_empty def.recd)
   else
     (message_erreur lb le
        ("record "^ident^" is not declared."); false)
@@ -226,9 +226,9 @@ let find_type env type_ident lb le =
 
 let add_var lb le env ident typ mode niveau isparam =
   let env =
-    if isparam then
+    if isparam then (*On passe en paramètre l'adresse de la variable.*)
       {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.param_offset;} env.vars;
-              param_offset = env.param_offset + type_size env typ}
+                param_offset = env.param_offset + (match mode with | ModeInOut -> 8 | _ -> type_size env typ)}
     else
       {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.current_offset;} env.vars;
                 current_offset = env.current_offset - type_size env typ}
@@ -246,16 +246,17 @@ let add_record_field lb le env ident champ typ niveau =
   let res, def, _ = find_record env ident in
   if res then
     begin
-      if Smap.mem champ def then
+      if Smap.mem champ def.recd then
         (message_erreur lb le
            ("field "^champ^" is already declared in the record "^ident^".");
          env, false)
       else (
+        let cf = def.rcurrent_offset and size = type_size env typ in
         {env with
          types =
            Lmap.add
              (niveau,ident)
-             (TRecordDef (Smap.add champ typ def))
+             (TRecordDef {recd=(Smap.add champ {rtyp = typ; roffset = cf} def.recd); rcurrent_offset = cf+size;})
              env.types
         }, true)
     end

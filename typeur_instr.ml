@@ -13,7 +13,8 @@ let rec type_instr ret env niveau (tinstr : tinstr) =
        let tvar = find_var env ident lb le in
        if teq tvar texpr.typ then
          begin
-           if find_var_mode env ident lb le = ModeInOut then
+           let m = find_var_mode env ident lb le in
+           if m = ModeInOut || m = ModeVar then
              TypeNone
            else
              (message_erreur lb le ("parameter "^ident^" cannot be modified.");
@@ -41,7 +42,8 @@ let rec type_instr ret env niveau (tinstr : tinstr) =
            begin
              match expr_record.expr with
              | EAccess (None,ident) -> (
-                   if find_var_mode env ident lb le = ModeInOut then
+                 let m = find_var_mode env ident lb le in
+                 if m = ModeInOut || m = ModeVar then
                      TypeNone
                    else
                      (message_erreur lb le
