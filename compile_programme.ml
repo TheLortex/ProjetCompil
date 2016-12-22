@@ -5,10 +5,11 @@ open Printf
 open Compile_expr
 open Compile_instr
 open Compile_decl
-open Compile 
+open Compile
 open Lexing
+open Filename
 
-let compile fenv (_, decls, instrs) =
+let compile fenv filepath (_, decls, instrs) =
   let assembly_text =
     compile_decl 0 {decl = DeclProcedure("main",[],decls,instrs);
                     lb = noloc;
@@ -29,4 +30,4 @@ let compile fenv (_, decls, instrs) =
   let  assembly_data = label ".ligne" ++ string "\n" ++
                        label ".char" ++ string "%c"
   in
-  print_in_file "sortie.s" {text = assembly_text; data = assembly_data}
+  print_in_file ((Filename.chop_extension filepath)^".s") {text = assembly_text; data = assembly_data}

@@ -17,8 +17,10 @@ let rec type_expr env (texpr : texpr) =
     {texpr with typ = TypeNull}
 
   | EAccess (None, ident)-> (*Accès d'une variable.*)
-    {texpr with typ = find_var env ident lb le}
-
+    {texpr with
+     typ = find_var env ident lb le;
+     expr = (if is_function env ident then EEval(ident,[]) else EAccess (None, ident))}
+ 
   | EAccess (Some e, ident) -> (*Accès d'un type enregistrement.*)
     let nexpr = type_expr env e in
        {texpr with

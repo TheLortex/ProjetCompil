@@ -34,7 +34,7 @@ let ex =
           begin
             let ok, program, env = typeur !file program in
             if ok then begin
-              compile env program; exit(0)
+              compile env (!file) program; exit(0)
             end
               else exit(1)
           end )

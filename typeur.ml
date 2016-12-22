@@ -107,6 +107,21 @@ let add_ident lb le env i =
   else
     {env with idents = (i::env.idents)}, true
 
+let is_function env ident =
+  try
+    let t = (Smap.find ident env.vars).typ in
+    begin
+      match t with
+      | TFunction (ret,[],_) -> true
+      | TFunction (ret, p,_) -> false
+      | TType _ -> false
+      | _ -> false
+    end
+  with
+  | Not_found -> false
+
+
+
 let find_var env ident lb le  =
   try
     let t = (Smap.find ident env.vars).typ in
@@ -227,8 +242,9 @@ let find_type env type_ident lb le =
 let add_var lb le env ident typ mode niveau isparam =
   let env =
     if isparam then (*On passe en paramètre l'adresse de la variable.*)
-      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.param_offset;} env.vars;
-                param_offset = env.param_offset + (match mode with | ModeInOut -> 8 | _ -> type_size env typ)}
+      let ts = type_size env typ in
+      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.param_offset + (match mode with | ModeInOut -> 8 | _ -> ts)-8;} env.vars;
+                param_offset = env.param_offset + (match mode with | ModeInOut -> 8 | _ -> ts)}
     else
       {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.current_offset;} env.vars;
                 current_offset = env.current_offset - type_size env typ}

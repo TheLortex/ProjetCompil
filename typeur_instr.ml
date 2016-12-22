@@ -205,7 +205,7 @@ let rec type_instr ret env niveau (tinstr : tinstr) =
          TypeError)
     in
     {tinstr with
-     instr = IWhile(texpr, instrs);
+     instr = IWhile(ne, m);
      typ = errflag}
 
 and type_list_instr ret env niveau linstr =
