@@ -1,0 +1,46 @@
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\begin{document}
+
+  \section{Fonctionnement interne}
+  \subsection{Analyse syntaxique}
+  L'analyse syntaxique se fait en utilisant les outils Menhir et Ocamllex sans difficulté particulière.
+  Elle produit un arbre de syntaxe abstraite non typé et conforme à la grammaire spécifiée par le sujet.
+  \subsection{Typage}
+  Alors que l'analyse syntaxique effectue seulement une vérification, le typage doit ajouter de l'information à l'AST défini auparavant.
+  Le programme crée donc pour cela un environnement qui contient:
+  \begin{itemize}
+    \item \texttt{vars}: qui à un identifiant associe le type de l'identifiant (au plus grand niveau de déclaration possible). Cet identifiant peut correspondre à une déclaration de fonction, de variable ou de type.
+    \item \texttt{types}: qui à un couple (niveau,identifiant) renvoie le type déclaré par l'identifiant au niveau donné.
+    \item \texttt{idents}: liste des identifiants d'un niveau de déclaration et permet de vérifier que l'on n'utilise pas deux fois le même identifiant dans un niveau de déclarations.
+    \item \texttt{records\_to\_check}: liste des enregistrements qui ont été déclarés mais non définis et où il faut donc vérifier la définition avant de passer à un autre niveau de déclarations.
+  \end{itemize}
+  Le typage consiste donc à:
+  \begin{itemize}
+    \item pour les expressions: inférer les types intermédiaires.
+    \item pour les instructions: vérifier les correspondances de types.
+    \item pour les déclarations: déclarer les types, les variables et les fonctions.
+  \end{itemize}
+
+  Les informations sauvegardées dans l'AST décoré envoyé en retour sont donc: les types intermédiaires pour les expressions, les types de retour pour les instructions.
+  Pour les déclarations, l'important est de sauvegarder l'environnement d'exécution pour chaque déclaration de fonction.
+  Ainsi lorsque qu'une fonction est déclarée, on récupère l'environnement induit par les déclarations dans la fonction et on le sauvegarde pour l'exécution des instructions.
+  \subsection{Localisation et propagation des erreurs}
+  La localisation se fait pendant le parsing de Menhir grâce aux variables \texttt{\$startpos} et \texttt{\$endpos}.
+  Des erreurs typage peuvent arriver un peu partout dans l'arbre de syntaxe abstraite, elles sont propagées soit par un type de retour \texttt{TypeError} soit par un booléan mis à \texttt{false}.
+  Par ailleurs, l'ensemble de l'arbre de syntaxe est parcouru pendant le typage, même si une erreur a eu lieu à un certain moment. 
+  \section{Choix et problèmes rencontrés}
+  \subsection{Problèmes de visualisation}
+  Il est intéressant de pouvoir visualiser le comportement de l'analyse syntaxique et du typage de manière simple et intuitive.
+  C'est pourquoi j'ai développé un petit outil dans le fichier \texttt{ast\_printer.ml} qui permet de faire une représentation graphique de l'arbre de syntaxe abstraite typé. \\
+  Pour obtenir cette version modifiée du programme il suffit d'utiliser \texttt{make dot} en ayant le package ocamldot (\url{http://zoggy.github.io/ocamldot/}) préalablement installé.
+  Éxecuter \texttt{adac} sur un fichier source génère alors, si la syntaxe est correcte, deux fichiers \texttt{graph.dot} et \texttt{graph.svg} correspondant à l'arbre de syntaxe abstraite typé.
+  \subsection{Problèmes d'effacement des variables}
+  La définition des règles de jugement des types n'empêche pas la définition à deux niveaux différents de variables de même nom mais de types différents.
+  Ce n'est pas un problème: en effet seule la déclaration de niveau maximal compte pour la suite des déclarations et instructions.
+  Le problème vient lors de la déclaration de variables de types. En effet si on traite les types comme des variables simples alors des problèmes arrivent:
+  par exemple si l'on déclare une variable \texttt{x} d'un type \texttt{access R}, et que la déclaration du type \texttt{R} est ensuite écrasée par la déclaration d'un nouveau type \texttt{R}, alors on ne peut plus accéder aux véritables champs de \texttt{x}.
+  Il faut donc sauvegarder l'ensemble des déclarations de types: c'est l'enjeu de la variable \texttt{type} de l'environnement de typage.
+\end{document}
