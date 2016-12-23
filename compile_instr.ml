@@ -75,7 +75,7 @@ let rec compile_instr niveau decl_env =
       (if reverse then jge else jle)  forlabel ++
       addq (imm 16) (reg rsp)
 
-    | IReturn None -> movq (reg rbp) (reg rsp) ++ popq rbp ++ ret
+    | IReturn None -> movq (reg rbp) (reg rsp) ++ popq rbp ++  movq (imm 0) (reg rax) ++ ret
     | IReturn (Some expr) ->
       compile_expr false niveau decl_env expr ++
       (match expr.typ with
