@@ -54,7 +54,7 @@ let rec comprec niveau tdecl =
   | DeclProcedure (ident, params,decls, instrs) | DeclFunction (ident, params, _,decls, instrs) ->
     let fs = -tdecl.env.current_offset in
     List.fold_left (fun t d -> t ++ comprec (niveau+1) d) nop decls ++
-    (if niveau == 0 then (glabel "main") else (label (ident^"_"^(string_of_int niveau)))) ++ (* def de la fonction *)
+    (if niveau == 0 then (glabel "main") else (label (try Smap.find ident decl_env.vars with |Not_found -> failwith ident).uid )) ++ (* def de la fonction *)
     subq (imm fs) (reg rsp) ++ (*Ajout des variables locales sur la frame*)
     (if niveau == 0 then nop else movq (reg rbp) (ind ~ofs:(fs-8) rsp)) ++ (*Sauvegarde du rbp appelant*)
     leaq (ind ~ofs:(fs-8) rsp) rbp ++ (*Positionnement du pointeur de frame*)

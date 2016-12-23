@@ -1,7 +1,7 @@
 open Ast
 open Printf
 open Lexing
-
+open Compile
 
 let teq t1 t2 = match t1,t2 with
   | (TAccessRecord _, TypeNull) -> true
@@ -243,10 +243,10 @@ let add_var lb le env ident typ mode niveau isparam =
   let env =
     if isparam then (*On passe en paramètre l'adresse de la variable.*)
       let ts = type_size env typ in
-      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.param_offset + (match mode with | ModeInOut -> 8 | _ -> ts)-8;} env.vars;
+      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.param_offset + (match mode with | ModeInOut -> 8 | _ -> ts)-8; uid="";} env.vars;
                 param_offset = env.param_offset + (match mode with | ModeInOut -> 8 | _ -> ts)}
     else
-      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.current_offset;} env.vars;
+      {env with vars = Smap.add ident{typ = typ;mode = mode; level = niveau; offset = env.current_offset;uid="";} env.vars;
                 current_offset = env.current_offset - type_size env typ}
 
   in
@@ -254,7 +254,7 @@ let add_var lb le env ident typ mode niveau isparam =
 
 let add_type lb le env ident typ niveau =
   let typedef = TType (niveau,ident) in
-  let env = {env with vars = Smap.add ident {typ = typedef; mode = ModeNone; level = 0; offset = 0;} env.vars;
+  let env = {env with vars = Smap.add ident {typ = typedef; mode = ModeNone; level = 0; offset = 0;uid="";} env.vars;
                       types = Lmap.add (niveau,ident) typ env.types} in
   add_ident lb le env ident
 
@@ -281,10 +281,10 @@ let add_record_field lb le env ident champ typ niveau =
        ("record "^ident^" is not declared.");
      env,false)
 
-let add_function ?(addid=true) lb le env niveau ident (ret,params) =
+let add_function ?(addid=true) lb le env niveau ident uid (ret,params) =
   let env       =
     {env with
-     vars = Smap.add ident {typ = TFunction (ret,params,niveau); mode = ModeNone; level = niveau; offset = 0;} env.vars} in
+     vars = Smap.add ident {typ = TFunction (ret,params,niveau); mode = ModeNone; level = niveau; offset = 0;uid=uid;} env.vars} in
   let env, nok  =
     (if addid then add_ident lb le env ident else env,true)
   in env, nok

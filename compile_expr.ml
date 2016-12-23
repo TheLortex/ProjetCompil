@@ -193,9 +193,9 @@ let rec compile_expr valeur_gauche niveau decl_env =
       | OpAndThen->
                    let l1 = "and_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
                    let l2 = "and_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
-                   pe ++ popq rax ++
+                   comprec expr1 ++ popq rax ++
                    cmpq (imm 1) (reg rax) ++
-                   jne l1 ++
+                   jne l1 ++ comprec expr2 ++
                    popq rax ++
                    movq (imm 1) (reg rcx) ++
                    cmpq (imm 1) (reg rax) ++
@@ -212,14 +212,13 @@ let rec compile_expr valeur_gauche niveau decl_env =
                    pushq (reg rcx)
       | OpOrElse ->let l1 = "and_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
                    let l2 = "and_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
-                   pe ++ popq rax ++
+                   comprec expr1  ++ popq rax ++
                    cmpq (imm 1) (reg rax) ++
-                   jne l1 ++
+                   je l1 ++ comprec expr2 ++
                    popq rax ++
                    xorq (reg rcx) (reg rcx) ++
-                   movq (imm 1) (reg rcx) ++
                    cmpq (imm 1) (reg rax) ++
-                   je  l2 ++
+                   jne  l2 ++
                    label l1 ++
                    movq (imm 1) (reg rcx) ++
                    label l2 ++
@@ -242,6 +241,7 @@ let rec compile_expr valeur_gauche niveau decl_env =
       pushq (reg rax)
 
     | EEval (ident, lparams) ->
+      let fname = (try Smap.find ident decl_env.vars with |Not_found -> failwith ident).uid in
       let ret_typ, params, level = match (Smap.find ident decl_env.vars).typ with
         | TFunction (r,p,l) -> r,p,l
         | _ -> failwith "compile_expr.ml:212"
@@ -256,7 +256,7 @@ let rec compile_expr valeur_gauche niveau decl_env =
       movq (reg rbp) (reg rsi) ++
       (iter (niveau - level) (movq (ind ~ofs:16 rsi) (reg rsi))) ++ (*Empilement du pointeur vers le tableau d'activation de la fonction*)
       pushq (reg rsi) ++
-      call (ident^"_"^(string_of_int level)) ++ (*Appel de la procédure et retour dans rax*)
+      call fname ++ (*Appel de la procédure et retour dans rax*)
       addq (imm (8+frame_size params)) (reg rsp) ++ (*Dépilage*)
       (match texpr.typ with
       | TRecord i ->

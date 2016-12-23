@@ -45,6 +45,7 @@ and vard = {
   mode: mode;
   level: int;
   offset: int;
+  uid: string;
 }
 and env = {
   vars: vard Smap.t;

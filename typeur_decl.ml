@@ -2,6 +2,7 @@ open Typeur_expr
 open Typeur_instr
 open Typeur
 open Ast
+open Compile
 
 let get_type env lb le i =
   let id = String.lowercase (match i with |TIdent x |TAccess x -> x) in
@@ -193,8 +194,9 @@ let rec type_decl env tdecl niveau =
           ) params
       ) in
     (*Vérification de l'unicité des identifiants*)
-    let nenv = {env with idents = []; records_to_check = []} in
-    let nenv, ok = (add_function ~addid:(false) lb le nenv niveau i (ret, tparams)) in
+    let nenv = {env with idents = []; records_to_check = []; current_offset = -8; param_offset = 24;} in
+    let fid = "f_"^(string_of_int (uuid ())) in
+    let nenv, ok = (add_function ~addid:(false) lb le nenv niveau i fid (ret, tparams)) in
     let nenv, ok = List.fold_left (fun (ev,ek) (i,m,t) ->
         match m with
         | Some m_ ->
@@ -215,7 +217,7 @@ let rec type_decl env tdecl niveau =
           false)
       ) in
 
-    let nenv, nerr = add_function lb le env niveau i (ret,tparams) in
+    let nenv, nerr = add_function lb le env niveau i fid (ret,tparams) in
     let nenv = {nenv with records_to_check = []} in
     nenv,
     chk_records && err_d && err_i != TypeError && err_r && nerr,

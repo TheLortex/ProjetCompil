@@ -9,6 +9,7 @@ let rec compile_instr niveau decl_env =
   let rec comprec tinstr =
     match tinstr.instr with
     | IEval (i, lexpr) ->
+      let fname = (try Smap.find i decl_env.vars with |Not_found -> failwith i).uid in
       let ret_typ, params, level =
         match (try (Smap.find i decl_env.vars).typ with |Not_found -> print_string ("\nb "^i^"\n");TypeNone) with
         | TFunction (r,p,l) ->r,p,l
@@ -24,7 +25,7 @@ let rec compile_instr niveau decl_env =
       movq (reg rbp) (reg rsi) ++
       iter (niveau - level) (movq (ind ~ofs:16 rsi) (reg rsi)) ++ (*Empilement du pointeur vers le tableau d'activation de la fonction*)
       pushq (reg rsi) ++
-      call (i^"_"^(string_of_int level)) ++ (*Appel de la procédure*)
+      call fname ++ (*Appel de la procédure*)
       addq (imm (8+frame_size params)) (reg rsp) (*Dépilage*)
     | IConditional(texpr,instrsthen,[],q) ->
       let i1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) and e1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) in
