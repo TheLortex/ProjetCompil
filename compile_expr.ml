@@ -7,7 +7,9 @@ open Compile
 
 let rec compile_expr valeur_gauche niveau decl_env =
   let rec comprec texpr = match texpr.expr with
-    | EInt i ->  movl (imm i) (reg eax)
+    | EMinus expr -> comprec expr ++
+                     negl (reg eax)
+    | EInt i ->  movl (imm i) (reg eax) ++ movslq (reg eax) rax
     | EChar c -> movq (imm (Char.code c)) (reg rax)
     | ETrue -> movq (imm 1) (reg rax)
     | EFalse -> movq (imm 0) (reg rax)
@@ -115,14 +117,14 @@ let rec compile_expr valeur_gauche niveau decl_env =
       let pe = comprec expr2 ++ pushq (reg rax) ++ comprec expr1 in
       begin
       match operateur with
-      | OpDiv   -> pe ++ popq rbx ++ cqto ++
-                   idivq (reg rbx)
-      | OpMinus -> pe ++ popq rbx ++ subl (reg ebx) (reg eax)
-      | OpPlus  -> pe ++ popq rbx ++ addl (reg ebx) (reg eax)
-      | OpTimes -> pe ++ popq rbx ++ imull (reg ebx) (reg eax)
-      | OpRem   -> pe ++ popq rbx ++ cqto ++
+      | OpDiv   -> pe ++ popq rbx ++ movslq (reg eax) rax ++ movslq (reg ebx) rbx ++ cqto ++
+                   idivq (reg rbx) ++ movslq (reg eax) rax
+      | OpMinus -> pe ++ popq rbx ++ subl (reg ebx) (reg eax) ++ movslq (reg eax) rax
+      | OpPlus  -> pe ++ popq rbx ++ addl (reg ebx) (reg eax) ++ movslq (reg eax) rax
+      | OpTimes -> pe ++ popq rbx ++ imull (reg ebx) (reg eax) ++ movslq (reg eax) rax
+      | OpRem   -> pe ++ popq rbx ++ movslq (reg eax) rax   ++ cqto ++
                    idivq (reg rbx) ++
-                   movq (reg rdx) (reg rax)
+                   movq (reg rdx) (reg rax) ++ movslq (reg eax) rax
       | OpEq    ->
         begin
           match expr1.typ with
@@ -137,11 +139,18 @@ let rec compile_expr valeur_gauche niveau decl_env =
              done; !c) ++ addq (imm ts) (reg rsp) ++
             cmpq (imm (ts/8)) (reg rdx) ++
             sete (reg al)
+          | TAccessRecord _ -> pe ++ popq rbx ++
+                               xorq (reg rcx) (reg rcx) ++
+                               cmpq (reg rbx) (reg rax) ++
+                               sete (reg cl) ++
+                               movq (reg rcx) (reg rax)
           | _ -> pe ++ popq rbx ++
                  xorq (reg rcx) (reg rcx) ++
-                 cmpq (reg rbx) (reg rax) ++
+                 cmpl (reg ebx) (reg eax) ++
                  sete (reg cl) ++
                  movq (reg rcx) (reg rax)
+
+
         end
       | OpNeq   ->
         begin
@@ -158,26 +167,31 @@ let rec compile_expr valeur_gauche niveau decl_env =
             cmpq (imm (ts/8)) (reg rdx) ++
             setne (reg cl) ++
             movq (reg rcx) (reg rax)
+          | TAccessRecord _ -> pe ++ popq rbx ++
+                               xorq (reg rcx) (reg rcx) ++
+                               cmpq (reg rbx) (reg rax) ++
+                               setne (reg cl) ++
+                               movq (reg rcx) (reg rax)
           | _ -> pe ++ popq rbx ++
                  xorq (reg rcx) (reg rcx) ++
-                 cmpq (reg rbx) (reg rax) ++
+                 cmpl (reg ebx) (reg eax) ++
                  setne (reg cl) ++
                  movq (reg rcx) (reg rax)
         end
       | OpGt    -> pe ++ popq rbx ++ xorq (reg rcx) (reg rcx) ++
-                   cmpq (reg rbx) (reg rax) ++
+                   cmpl (reg ebx) (reg eax)  ++
                    setg (reg cl) ++
                    movq (reg rcx) (reg rax)
       | OpGet   -> pe ++ popq rbx ++ xorq (reg rcx) (reg rcx) ++
-                   cmpq (reg rbx) (reg rax) ++
+                   cmpl (reg ebx) (reg eax)  ++
                    setge (reg cl) ++
                    movq (reg rcx) (reg rax)
       | OpLt    -> pe ++ popq rbx  ++ xorq (reg rcx) (reg rcx) ++
-                   cmpq (reg rbx) (reg rax) ++
+                   cmpl (reg ebx) (reg eax)  ++
                    setl (reg cl) ++
                    movq (reg rcx) (reg rax)
       | OpLet   -> pe ++ popq rbx  ++ xorq (reg rcx) (reg rcx) ++
-                   cmpq (reg rbx) (reg rax) ++
+                   cmpl (reg ebx) (reg eax)  ++
                    setle (reg cl) ++
                    movq (reg rcx) (reg rax)
       | OpAnd ->   pe ++ popq rbx  ++ addq (reg rbx) (reg rax) ++
@@ -220,8 +234,6 @@ let rec compile_expr valeur_gauche niveau decl_env =
     | ENot expr -> comprec expr ++
                    cmpq (imm 0) (reg rax) ++
                    sete (reg al)
-    | EMinus expr -> comprec expr ++
-                     negq (reg rax)
     | ENew ident -> let x = match texpr.typ with | TAccessRecord i -> i | _ -> failwith "non" in
       (*TODO: Penser à free*)
       let ts = type_size decl_env (TRecord x) in

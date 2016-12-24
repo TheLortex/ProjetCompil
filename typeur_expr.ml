@@ -4,6 +4,24 @@ open Ast
 let rec type_expr env (texpr : texpr) =
   let lb = texpr.lb and le = texpr.le in
   match texpr.expr with
+  | EMinus e ->
+    let nexpr = type_expr env e in
+    {texpr with
+     expr = begin
+       match nexpr.expr with
+       | EInt i -> EMinus(nexpr) (*EInt (-i)*)
+       | _ -> EMinus(nexpr)
+     end;
+     typ =
+       (if nexpr.typ = Tint then
+          Tint
+        else
+          begin
+            if nexpr.typ != TypeError then
+              message_erreur lb le
+                ("type mismatch for operator - : int != "^(p_typ nexpr.typ));
+            TypeError
+          end)}
   | EInt _ ->
     {texpr with typ = Tint}
 
@@ -20,7 +38,7 @@ let rec type_expr env (texpr : texpr) =
     {texpr with
      typ = find_var env ident lb le;
      expr = (if is_function env ident then EEval(ident,[]) else EAccess (None, ident))}
- 
+
   | EAccess (Some e, ident) -> (*Accès d'un type enregistrement.*)
     let nexpr = type_expr env e in
        {texpr with
@@ -123,20 +141,6 @@ let rec type_expr env (texpr : texpr) =
           end
        )
     }
-  | EMinus e ->
-    let nexpr = type_expr env e in
-    {texpr with
-     expr = EMinus(nexpr);
-     typ =
-       (if nexpr.typ = Tint then
-          Tint
-        else
-          begin
-            if nexpr.typ != TypeError then
-              message_erreur lb le
-                ("type mismatch for operator - : int != "^(p_typ nexpr.typ));
-            TypeError
-          end)}
   | ENew i ->
     {texpr with
      typ =

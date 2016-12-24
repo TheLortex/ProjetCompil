@@ -69,10 +69,10 @@ let rec compile_instr niveau decl_env =
       jmp forlabel2 ++
       label forlabel ++
       compile_instrs niveau decl_env instrs ++
-      (if reverse then decq (ind rsp) else incq (ind rsp)) ++
+      (if reverse then decl (ind rsp) else incl (ind rsp)) ++
       label forlabel2 ++
       movq (ind ~ofs:8 rsp) (reg rax) ++
-      cmpq (reg rax) (ind rsp) ++
+      cmpl (reg eax) (ind rsp) ++
       (if reverse then jge else jle)  forlabel ++
       addq (imm 16) (reg rsp)
 
