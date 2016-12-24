@@ -195,7 +195,7 @@ let rec type_decl env tdecl niveau =
       ) in
     (*Vérification de l'unicité des identifiants*)
     let nenv = {env with idents = []; records_to_check = []; current_offset = -8; param_offset = 24;} in
-    let fid = "f_"^(string_of_int (uuid ())) in
+    let fid = i^"_"^(string_of_int (uuid ())) in
     let nenv, ok = (add_function ~addid:(false) lb le nenv niveau i fid (ret, tparams)) in
     let nenv, ok = List.fold_left (fun (ev,ek) (i,m,t) ->
         match m with

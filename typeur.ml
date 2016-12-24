@@ -183,16 +183,11 @@ let get_record_def env (level,ident) =
 
   (* Taille du type en octets *)
 let rec type_size env = function
-  | Tchar -> 8 (*TODO: Optimize*)
-  | Tbool -> 8
-  | Tint -> 8
-  | TypeNull -> 8
-  | TAccessRecord _ -> 8
   | TRecord id ->
     let recd = get_record_def env id in
     let size_field _ tfield total = total + type_size env tfield.rtyp in
     Smap.fold size_field recd.recd 0
-  | _ -> 0
+  | _ -> 8
 
 let find_record env ident =
   try

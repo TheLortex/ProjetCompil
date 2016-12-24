@@ -28,7 +28,6 @@ let compile_decl niveau =
                        ) nop ilist)
              done; !c;
            | _ ->
-                popq rax ++
                 (List.fold_left
                    (fun s x ->
                       s ++
@@ -37,7 +36,6 @@ let compile_decl niveau =
           locals_init niveau decl_env q
         | Decl (ilist,TAccess t,Some expr) ->
           compile_expr true (niveau+1) decl_env expr ++
-          popq rax ++
           (List.fold_left
              (fun s x ->
                 s ++

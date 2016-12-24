@@ -21,7 +21,10 @@ let rec compile_instr niveau decl_env =
         | (_,_,p)::q -> type_size decl_env p + frame_size q
       in
       List.fold_left (*Empilement des paramètres*)
-        (fun acc (e,(_,m,_)) -> compile_expr (match m with |Some ModeInOut -> true | _ -> false) niveau decl_env e ++ acc) nop (List.combine lexpr params) ++
+        (fun acc (e,(_,m,_) : texpr * tparam) -> compile_expr (match m with |Some ModeInOut -> true | _ -> false) niveau decl_env e ++
+                                                 (match e.typ with |TRecord _ -> (match m with |Some ModeInOut -> pushq (reg rax) | _ -> nop) | _ -> pushq (reg rax)) ++
+                                                 acc)
+        nop (List.combine lexpr params) ++
       movq (reg rbp) (reg rsi) ++
       iter (niveau - level) (movq (ind ~ofs:16 rsi) (reg rsi)) ++ (*Empilement du pointeur vers le tableau d'activation de la fonction*)
       pushq (reg rsi) ++
@@ -30,7 +33,6 @@ let rec compile_instr niveau decl_env =
     | IConditional(texpr,instrsthen,[],q) ->
       let i1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) and e1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) in
       compile_expr false niveau decl_env texpr ++
-      popq rax ++
       cmpq (imm 1) (reg rax) ++
       je i1 ++
       begin
@@ -45,7 +47,6 @@ let rec compile_instr niveau decl_env =
     | IConditional(texpr,instrsthen,elsifs,q) ->
       let i1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) and e1 = ("if_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) in
       compile_expr false niveau decl_env texpr ++
-      popq rax ++
       cmpq (imm 1) (reg rax) ++
       je i1 ++
       begin
@@ -61,10 +62,10 @@ let rec compile_instr niveau decl_env =
       let forlabel = "for_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
       let forlabel2 = "for_"^(string_of_int niveau)^"_"^(string_of_int (uuid ())) in
       (if reverse
-       then (compile_expr false niveau decl_env expr1 ++
-             compile_expr false niveau decl_env expr2)
-       else (compile_expr false niveau decl_env expr2 ++
-             compile_expr false niveau decl_env expr1)) ++
+       then (compile_expr false niveau decl_env expr1 ++ pushq (reg rax) ++
+               compile_expr false niveau decl_env expr2 ++ pushq (reg rax))
+       else (compile_expr false niveau decl_env expr2 ++ pushq (reg rax) ++
+               compile_expr false niveau decl_env expr1 ++ pushq (reg rax))) ++
       jmp forlabel2 ++
       label forlabel ++
       compile_instrs niveau decl_env instrs ++
@@ -81,22 +82,23 @@ let rec compile_instr niveau decl_env =
       (match expr.typ with
        | TRecord (i,l) ->
          let ts = type_size decl_env (TRecord (i,l) ) in
-           compile_expr false niveau decl_env {expr = (ENew l); typ = TAccessRecord (i,l); lb = noloc; le=noloc;} ++
-           popq rsi ++
-           (let c = ref(nop) in (*On push le contenu*)
+          compile_expr false niveau decl_env {expr = (ENew l); typ = TAccessRecord (i,l); lb = noloc; le=noloc;} ++
+          movq (reg rax) (reg rsi) ++
+          (let c = ref(nop) in (*On push le contenu*)
             for i = 1 to (ts/8) do
               c := !c ++ (popq rax) ++ movq (reg rax) (ind ~ofs:(-ts+8*i) rsi)
             done; !c) ++
-           movq (reg rbp) (reg rsp) ++
-           popq rbp ++
-           movq (reg rsi) (reg rax)++
-           ret
-       | _ -> popq rax) ++ movq (reg rbp) (reg rsp) ++ popq rbp ++ ret
+          movq (reg rbp) (reg rsp) ++
+          popq rbp ++
+          movq (reg rsi) (reg rax)++
+          ret
+       | _ -> nop) ++ movq (reg rbp) (reg rsp) ++ popq rbp ++ ret
     | IAssign (access, texpr) ->
       let ts = type_size decl_env texpr.typ in
-      compile_expr false niveau decl_env texpr ++ (*Résultat de l'expression sur la pile*)
-      compile_expr true niveau decl_env {expr = (EAccess access); typ = texpr.typ; lb=noloc;le=noloc;} ++ (*Adresse de sauvegarde sur la pile*)
-      popq rsi ++ (*On balance l'adresse dans rsi*)
+      compile_expr false niveau decl_env texpr ++
+      (match texpr.typ with |TRecord _ -> nop | _ -> pushq (reg rax)) ++
+      compile_expr true niveau decl_env {expr = (EAccess access); typ = texpr.typ; lb=noloc;le=noloc;} ++
+      movq (reg rax) (reg rsi) ++ (*On balance l'adresse dans rsi*)
       (let c = ref(nop) in (*On push le contenu*)
        for i = 1 to (ts/8) do
          c := !c ++ (popq rax) ++ movq (reg rax) (ind ~ofs:(-ts+8*i) rsi)
@@ -108,7 +110,6 @@ let rec compile_instr niveau decl_env =
       l2 = ("for_"^(string_of_int niveau)^"_"^(string_of_int (uuid ()))) in
       label l1 ++
       compile_expr false niveau decl_env texpr ++
-      popq rax ++
       cmpq (imm 0) (reg rax) ++
       je l2 ++
       compile_instrs niveau decl_env linstr ++
